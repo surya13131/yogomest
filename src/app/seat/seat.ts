@@ -1291,6 +1291,9 @@ export const fetchSeatLayoutData = async ({
       ): NormalizedSeat[] => {
         if (!coachStr) return [];
         const parsed: NormalizedSeat[] = [];
+        const isGarula = String(operatorName || "")
+          .toLowerCase()
+          .includes("garula");
 
         if (Array.isArray(coachStr)) {
           return coachStr
@@ -1304,10 +1307,15 @@ export const fetchSeatLayoutData = async ({
               if (Number.isNaN(row) || Number.isNaN(col)) return null;
 
               const upLow = String(seat.UpLowBerth || seat.upLowBerth || "").trim().toUpperCase();
-              const isUpper =
-                isForcedUpperDeck  ||
-                upLow === "U"      || upLow === "UPPER" ||
-                /UB$/i.test(seatId) || /U\d+/i.test(seatId);
+              const isUpper = isGarula
+                ? seatId.toUpperCase().startsWith("U")
+                : (
+                    isForcedUpperDeck ||
+                    upLow === "U" ||
+                    upLow === "UPPER" ||
+                    /UB$/i.test(seatId) ||
+                    /U\d+/i.test(seatId)
+                  );
 
               return {
                 id:          seatId,
@@ -1360,11 +1368,14 @@ export const fetchSeatLayoutData = async ({
               const isSleeper   =
                 typeCode.includes("L") || typeCode.includes("U") ||
                 typeCode.includes("Sleeper") || typeCode.includes("SL");
-              const isUpper     =
-                isForcedUpperDeck ||
-                /UB|DUL|DUB|SUB|SU|USL|UPPER/i.test(typeCode) ||
-                /UB$/i.test(seatId) ||
-                /U\d+/i.test(seatId);
+              const isUpper = isGarula
+                ? seatId.toUpperCase().startsWith("U")
+                : (
+                    isForcedUpperDeck ||
+                    /UB|DUL|DUB|SUB|SU|USL|UPPER/i.test(typeCode) ||
+                    /UB$/i.test(seatId) ||
+                    /U\d+/i.test(seatId)
+                  );
 
               parsed.push({
                 id:          seatId,
