@@ -1,8 +1,8 @@
 import { cityMapping } from "./cityMapping";
 
 
-const BASE_URL = "https://apis.yesgobus.com";
-const EZEE_BASE_URL = "https://test.yesgobus.com";
+const BASE_URL = "";
+const EZEE_BASE_URL = "";
 const CACHE_TTL_BUS_LIST = 3 * 60 * 1000; // 3 minutes
 const CACHE_TTL_SEAT_LAYOUT = 2 * 60 * 1000; // 2 minutes
 const CACHE_TTL_CITY = 10 * 60 * 1000; // 10 minutes
