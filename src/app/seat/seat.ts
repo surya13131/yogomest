@@ -832,7 +832,7 @@ const applyBusTypeRules = (
       seat.isUpper || /^U\d|^UB\d|UPPER|USL|SU/i.test(seatName);
 
     const isSleeperByName =
-      /^L\d+|^U\d+|LB|UB|SB|SL|SU|USL|LSL|LOWER|UPPER|BERTH/i.test(seatName);
+      /^L\d+|^U\d+|LB|UB|SB|SL|SU|DL|DU|USL|LSL|LOWER|UPPER|BERTH/i.test(seatName);
 
     const isSleeperBySize = width > 1 || height > 1 || length > 1;
 
@@ -1095,7 +1095,8 @@ export const fetchSeatLayoutData = async ({
         // Sleeper codes: SL, LSL, USL, SLSL, SUSL, WSL.
         // Seater codes: ST, PB, SS, etc.
         const isSleeper =
-          ["SL", "LSL", "USL", "SLSL", "SUSL", "WSL"].includes(ezeeSeatCode);
+          ["SL", "LSL", "USL", "SLSL", "SUSL", "WSL"].includes(ezeeSeatCode) ||
+          /^L\d+|^U\d+|LB|UB|SB|SL|SU|DL|DU|USL|LSL|LOWER|UPPER|BERTH/i.test(seatName);
 
         return {
           id:          String(seat.seatName),
