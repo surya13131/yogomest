@@ -1271,7 +1271,7 @@ function BusListContent() {
                             </div>
                             <div className="text-muted mt-1 d-flex align-items-center gap-1 fw-medium" style={{ fontSize: "11px" }}>
                               <i className="bi bi-people-fill"></i>
-                              {displaySeats} Seats Left
+                              {(bus as any).availableSeaterCount || displaySeats} Seats Left
                             </div>
                           </div>
                         </div>
@@ -1290,7 +1290,7 @@ function BusListContent() {
                             <div className="fw-bold text-dark lh-1" style={{ fontSize: "18px" }}>{arrTimeVal}</div>
                             <div className="text-muted mt-1 fw-bold" style={{ fontSize: "11px" }}>{arrTimeAmPm}</div>
                             <div className="text-danger mt-1 fw-bold text-nowrap" style={{ fontSize: "10px" }}>
-                              {displaySeats} Seats
+                              {(bus as any).availableSeaterCount || displaySeats} Seats
                             </div>
                           </div>
                         </div>

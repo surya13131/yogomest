@@ -579,6 +579,32 @@ const normalizeColumns = (deckSeats: NormalizedSeat[]) => {
       }
     }
 
+    const isRajKalpanaProblemBus =
+      provider === "SRS" &&
+      operatorName === "Raj Kalpana Travels Pvt.Ltd" &&
+      busType === "2+1, Bharat benz Semi Sleeper/Sleeper, AC";
+
+    const isPatelDayavan =
+      provider === "SRS" &&
+      operatorName?.toLowerCase() === "patel travels dayavan (surat)";
+
+    if (isRajKalpanaProblemBus) {
+      console.log("[Raj Kalpana Fix] Applying targeted row adjustments.");
+      deckSeats = deckSeats.map(seat => {
+        let newRow = seat.row;
+        
+        if (seat.id === "L6") {
+          newRow += 1; // move only L6 down to prevent overlap
+        }
+        
+        if (!seat.isSleeper && !seat.isUpper) {
+          newRow += 1; // shift lower-deck seaters down to align with sleepers
+        }
+        
+        return newRow !== seat.row ? { ...seat, row: newRow } : seat;
+      });
+    }
+
     // Check if the deck has exactly one seater and the rest are sleepers.
     const seaterCount = deckSeats.filter(s => !s.isSleeper).length;
     const sleeperCount = deckSeats.filter(s => s.isSleeper).length;
@@ -688,14 +714,16 @@ const normalizeColumns = (deckSeats: NormalizedSeat[]) => {
       !(busType?.toLowerCase().includes("sleeper") && busType?.toLowerCase().includes("seater"));
 
     const shouldSkipColumnNormalization =
-      isPureSriBalajiSleeper || isVrl || isSRS2Plus2 || provider === "EZEE_V2" || provider === "EZEE_V3";
+      isPureSriBalajiSleeper || isVrl || isSRS2Plus2 || isPatelDayavan || provider === "EZEE_V2" || provider === "EZEE_V3";
 
     // 1. Enforce 2+2 layout only for true 2+2 buses.
     //    For VRL normal buses, trust the API coordinates instead of forcing compression.
     let colNormalized = axisMappedSeats;
     
     // ✅ Bypass format2Plus2Layout for SRS 2+2, preserving exact seat parser coordinates
-    if (is2Plus2Bus && !isVrl && !isSRS2Plus2) {
+    if (isPatelDayavan) {
+      console.log("[Patel Fix] bypassing SRS repair");
+    } else if (is2Plus2Bus && !isVrl && !isSRS2Plus2) {
       colNormalized = format2Plus2Layout(axisMappedSeats);
     } else if (!shouldSkipColumnNormalization) {
       colNormalized = normalizeColumns(axisMappedSeats);
@@ -705,6 +733,7 @@ const normalizeColumns = (deckSeats: NormalizedSeat[]) => {
     if (
       is21SleeperBus &&
       !isVrl &&
+      !isPatelDayavan &&
       provider === "SRS"
     ) {
       colNormalized = normalizeColumns(axisMappedSeats);
@@ -750,7 +779,7 @@ const normalizeColumns = (deckSeats: NormalizedSeat[]) => {
       if (count > 1) hasCollision = true;
     });
 
-    if (hasCollision) {
+    if (hasCollision && !isPatelDayavan) {
         const colOccurrences = new Map<number, number>();
         colNormalized = colNormalized.map(seat => {
           if (seat.row === currentMaxRow) {
@@ -806,7 +835,7 @@ const normalizeColumns = (deckSeats: NormalizedSeat[]) => {
             return {
               ...seat,
               row: maxRow + index + 1,
-              col: 1, // center
+              col: isPatelDayavan ? 0 : 1, // center (0 for Patel)
             };
           }
         }
@@ -1076,8 +1105,8 @@ const normalizeColumns = (deckSeats: NormalizedSeat[]) => {
 
     // For SRS or specific EZEE mixed layouts, the API coordinates are generally correct and should not
     // be subjected to EZEE's special seater-stacking logic. We can return early.
-    if (isSrsMixed || isEzeeThreeRowSeaterLayout) {
-      console.log(`[Layout] ${isSrsMixed ? "SRS" : "EZEE Three Row Seater"} mixed layout detected. Bypassing specific stacking logic.`);
+    if (isSrsMixed || isEzeeThreeRowSeaterLayout || isPatelDayavan) {
+      console.log(`[Layout] ${isPatelDayavan ? "Patel" : isSrsMixed ? "SRS" : "EZEE Three Row Seater"} mixed layout detected. Bypassing specific stacking logic.`);
       
       let sleeperOffset = 0;
       if (isEzeeThreeRowSeaterLayout) {
@@ -1129,6 +1158,10 @@ const normalizeColumns = (deckSeats: NormalizedSeat[]) => {
       if (isEzeeMixedBus && !seat.isSleeper && seat.col >= 2) {
         finalGridRow += 1;
       }
+      
+      if (isEzeeMixedBus && !seat.isSleeper && seat.col === 0) {
+        finalGridRow += 2;
+      }
 
       console.log(seat.id, seat.row, finalGridRow, seat.isRotated);
 
@@ -1155,6 +1188,16 @@ const normalizeColumns = (deckSeats: NormalizedSeat[]) => {
           row: s.row,
           gridRow: s.gridRow
         }))
+    );
+
+    console.log(
+      "[FINAL GRID]",
+      visualGridResult.map(s => ({
+        id: s.id,
+        row: s.row,
+        col: s.col,
+        gridRow: s.gridRow
+      }))
     );
 
     return visualGridResult;

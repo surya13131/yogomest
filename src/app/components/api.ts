@@ -202,6 +202,8 @@ export interface NormalizedBus {
   duration: string;
   price: number;
   availableSeats: number;
+  availableSeaterCount?: number;
+  availableSleeperCount?: number;
   rating: string;
   apiProvider: "VRL" | "SRS" | "EZEE_V2" | "EZEE_V3"; 
   originalData: any;
@@ -590,19 +592,43 @@ export const fetchEzeeBusesV2 = async (
     const rawData = data?.data?.buses || data?.buses || data?.data || data?.result || data;
     const busArray = Array.isArray(rawData) ? rawData : [];
     
-    return busArray.map((bus: any): NormalizedBus => ({
-      id: bus.tripCode || bus.TripCode || bus.id || Math.random().toString(),
-      apiProvider: "EZEE_V2",
-      operatorName: bus.operatorName || bus.travels || bus.TravelsName || "Ezee Travels",
-      busType: bus.busType || bus.BusType || "A/C Sleeper",
-      departureTime: bus.departureTime || bus.deptTime || bus.DepartureTime || "00:00",
-      arrivalTime: bus.arrivalTime || bus.arrTime || bus.ArrivalTime || "00:00",
-      duration: bus.duration || "---",
-      price: extractValidPrice(bus), // ✅ FIXED PRICE EXTRACTION
-      availableSeats: parseInt(bus.availableSeats || bus.seatsAvailable || bus.AvailableSeats || "0", 10),
-      rating: bus.rating || "4.5",
-      originalData: bus 
-    }));
+    return busArray.map((bus: any): NormalizedBus => {
+      const seatLayoutList = bus.seatLayoutList || bus.bus?.seatLayoutList || [];
+      
+      const calculatedAvailableSeats = seatLayoutList.filter(
+        (seat: any) => seat?.seatStatus?.code === "AL"
+      ).length;
+
+      const availableSeaterCount = seatLayoutList.filter(
+        (seat: any) =>
+          seat.seatStatus?.code === "AL" &&
+          seat.busSeatType?.code === "SS"
+      ).length;
+
+      const availableSleeperCount = seatLayoutList.filter(
+        (seat: any) =>
+          seat.seatStatus?.code === "AL" &&
+          ["SL", "USL", "LSL", "WSL", "SUSL", "SLSL"].includes(seat.busSeatType?.code)
+      ).length;
+
+      console.log("EZEE Available Seats", calculatedAvailableSeats);
+
+      return {
+        id: bus.tripCode || bus.TripCode || bus.id || Math.random().toString(),
+        apiProvider: "EZEE_V2",
+        operatorName: bus.operatorName || bus.travels || bus.TravelsName || "Ezee Travels",
+        busType: bus.busType || bus.BusType || "A/C Sleeper",
+        departureTime: bus.departureTime || bus.deptTime || bus.DepartureTime || "00:00",
+        arrivalTime: bus.arrivalTime || bus.arrTime || bus.ArrivalTime || "00:00",
+        duration: bus.duration || "---",
+        price: extractValidPrice(bus),
+        availableSeats: calculatedAvailableSeats > 0 ? calculatedAvailableSeats : parseInt(bus.availableSeats || bus.seatsAvailable || bus.AvailableSeats || "0", 10),
+        availableSeaterCount: availableSeaterCount > 0 ? availableSeaterCount : undefined,
+        availableSleeperCount: availableSleeperCount > 0 ? availableSleeperCount : undefined,
+        rating: bus.rating || "4.5",
+        originalData: bus 
+      };
+    });
   } catch (error) {
     console.error("[Ezee V2 Error] Fetch failed, UI is shielded:", error);
     return [];
@@ -646,19 +672,43 @@ export const fetchEzeeBusesV3 = async (
     const rawData = data?.data?.buses || data?.buses || data?.data || data?.result || data;
     const busArray = Array.isArray(rawData) ? rawData : [];
     
-    return busArray.map((bus: any): NormalizedBus => ({
-      id: bus.tripCode || bus.id || bus.scheduleId || Math.random().toString(),
-      apiProvider: "EZEE_V3",
-      operatorName: bus.operatorName || bus.travels || "Ezee Travels",
-      busType: bus.busType || "A/C Sleeper",
-      departureTime: bus.departureTime || bus.deptTime || "00:00",
-      arrivalTime: bus.arrivalTime || bus.arrTime || "00:00",
-      duration: bus.duration || "---",
-      price: extractValidPrice(bus), // ✅ FIXED PRICE EXTRACTION
-      availableSeats: parseInt(bus.availableSeats || bus.seatsAvailable || "0", 10),
-      rating: bus.rating || "4.5",
-      originalData: bus
-    }));
+    return busArray.map((bus: any): NormalizedBus => {
+      const seatLayoutList = bus.seatLayoutList || bus.bus?.seatLayoutList || [];
+      
+      const calculatedAvailableSeats = seatLayoutList.filter(
+        (seat: any) => seat?.seatStatus?.code === "AL"
+      ).length;
+
+      const availableSeaterCount = seatLayoutList.filter(
+        (seat: any) =>
+          seat.seatStatus?.code === "AL" &&
+          seat.busSeatType?.code === "SS"
+      ).length;
+
+      const availableSleeperCount = seatLayoutList.filter(
+        (seat: any) =>
+          seat.seatStatus?.code === "AL" &&
+          ["SL", "USL", "LSL", "WSL", "SUSL", "SLSL"].includes(seat.busSeatType?.code)
+      ).length;
+
+      console.log("EZEE Available Seats", calculatedAvailableSeats);
+
+      return {
+        id: bus.tripCode || bus.id || bus.scheduleId || Math.random().toString(),
+        apiProvider: "EZEE_V3",
+        operatorName: bus.operatorName || bus.travels || "Ezee Travels",
+        busType: bus.busType || "A/C Sleeper",
+        departureTime: bus.departureTime || bus.deptTime || "00:00",
+        arrivalTime: bus.arrivalTime || bus.arrTime || "00:00",
+        duration: bus.duration || "---",
+        price: extractValidPrice(bus),
+        availableSeats: calculatedAvailableSeats > 0 ? calculatedAvailableSeats : parseInt(bus.availableSeats || bus.seatsAvailable || "0", 10),
+        availableSeaterCount: availableSeaterCount > 0 ? availableSeaterCount : undefined,
+        availableSleeperCount: availableSleeperCount > 0 ? availableSleeperCount : undefined,
+        rating: bus.rating || "4.5",
+        originalData: bus
+      };
+    });
   } catch (error) {
     console.error("[Ezee V3 Error] Fetch failed, UI is shielded:", error);
     return [];
