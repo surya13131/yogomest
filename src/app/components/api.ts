@@ -571,7 +571,11 @@ export const fetchEzeeBusesV2 = async (
 ): Promise<NormalizedBus[]> => {
   try {
 
-    const url = `${EZEE_BASE_URL}/api/bus/ezee/busList-v2/${sourceName}/${destName}/${journeyDate}/${sourceName}/${destName}`;
+    const url = `${EZEE_BASE_URL}/api/bus/ezee/busList-v2/${encodeURIComponent(
+      sourceName
+    )}/${encodeURIComponent(destName)}/${encodeURIComponent(
+      journeyDate
+    )}/${encodeURIComponent(sourceName)}/${encodeURIComponent(destName)}`;
     console.log("Fetching Ezee V2 API:", url);
 
     const cached = getCachedData(url);
@@ -651,7 +655,11 @@ export const fetchEzeeBusesV3 = async (
     }
 
     // 🔥 Hits the Test URL directly so it works alongside the Production VRL/SRS
-    const url = `${EZEE_BASE_URL}/api/bus/ezee/busList-v3/${sourceName}/${destName}/${journeyDate}/${sourceCode}/${destCode}`;
+    const url = `${EZEE_BASE_URL}/api/bus/ezee/busList-v3/${encodeURIComponent(
+      sourceName
+    )}/${encodeURIComponent(destName)}/${encodeURIComponent(
+      journeyDate
+    )}/${encodeURIComponent(sourceCode)}/${encodeURIComponent(destCode)}`;
     console.log("Fetching Ezee V3 API:", url);
 
     const cached = getCachedData(url);
@@ -779,7 +787,11 @@ export const fetchEzeeSeatLayout = async (
     }
 
     // 🔥 Hits the Test URL directly
-    const url = `${EZEE_BASE_URL}/api/bus/ezee/busMap/${tripCode}/${sourceStationCode}/${destStationCode}/${date}`;
+    const url = `${EZEE_BASE_URL}/api/bus/ezee/busMap/${encodeURIComponent(
+      tripCode
+    )}/${encodeURIComponent(sourceStationCode)}/${encodeURIComponent(
+      destStationCode
+    )}/${encodeURIComponent(date)}`;
     
     const cached = getCachedData(url);
     if (cached) return cached;

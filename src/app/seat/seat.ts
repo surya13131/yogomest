@@ -901,16 +901,19 @@ export const fetchSeatLayoutData = async ({
       fetchCitySuggestions(destinationCity),
     ]);
     const sMatch: any =
-      sRes.find((c: any) => c.name.toLowerCase() === sourceCity.toLowerCase()) || sRes;
+      sRes.find((c: any) => c.name.toLowerCase() === sourceCity.toLowerCase()) || sRes[0];
     const dMatch: any =
-      dRes.find((c: any) => c.name.toLowerCase() === destinationCity.toLowerCase()) || dRes;
+      dRes.find((c: any) => c.name.toLowerCase() === destinationCity.toLowerCase()) || dRes[0];
 
     if (provider === "SRS") {
-      sId = sMatch?.srsCityId || sMatch?.id || "";
-      dId = dMatch?.srsCityId || dMatch?.id || "";
+      sId = sMatch?.srsCityId || sMatch?.id;
+      dId = dMatch?.srsCityId || dMatch?.id;
+    } else if (provider === "EZEE_V2" || provider === "EZEE_V3") {
+      sId = sMatch?.ezeeStationCode;
+      dId = dMatch?.ezeeStationCode;
     } else {
-      sId = sMatch?.vrlCityId || sMatch?.id || "";
-      dId = dMatch?.vrlCityId || dMatch?.id || "";
+      sId = sMatch?.vrlCityId || sMatch?.id;
+      dId = dMatch?.vrlCityId || dMatch?.id;
     }
   }
 
@@ -1064,27 +1067,38 @@ export const fetchSeatLayoutData = async ({
       console.log("[EZEE seat.ts] Fallback fare:", fallbackFare);
 
       fetchedSeats = validRawSeats.map((seat: any) => {
-        const isAvailable =
-          seat.isAvailable !== false &&
-          seat.available   !== false &&
-          seat.available   !== 0     &&
-          String(seat.seatStatus || seat.status || "A").toUpperCase() !== "B" &&
-          String(seat.seatStatus || seat.status || "A").toUpperCase() !== "BOOKED";
+        const genderCode =
+          seat.seatGendar?.code ||
+          seat.seatGender?.code ||
+          "";
 
-        const isLadiesSeat =
-          seat.isLadies === true ||
-          String(seat.isLadies).toLowerCase() === "true" ||
-          ["F", "FEMALE", "LADIES"].includes(String(seat.gender).trim().toUpperCase()) ||
-          ["F", "FEMALE", "LADIES"].includes(String(seat.seatGender).trim().toUpperCase()) ||
-          ["F", "FEMALE", "LADIES"].includes(String(seat.passengerSex).trim().toUpperCase());
+        const statusCode =
+          seat.seatStatus?.code || "";
+
+        const isAvailable = statusCode
+          ? statusCode === "AL"
+          : seat.isAvailable !== false &&
+            seat.available   !== false &&
+            seat.available   !== 0     &&
+            String(seat.seatStatus || seat.status || "A").toUpperCase() !== "B" &&
+            String(seat.seatStatus || seat.status || "A").toUpperCase() !== "BOOKED";
+
+        const isLadiesSeat = genderCode
+          ? genderCode === "F"
+          : seat.isLadies === true ||
+            String(seat.isLadies).toLowerCase() === "true" ||
+            ["F", "FEMALE", "LADIES"].includes(String(seat.gender).trim().toUpperCase()) ||
+            ["F", "FEMALE", "LADIES"].includes(String(seat.seatGender).trim().toUpperCase()) ||
+            ["F", "FEMALE", "LADIES"].includes(String(seat.passengerSex).trim().toUpperCase());
  
-        const isMaleSeat =
-          seat.isMale === true ||
-          String(seat.isMale).toLowerCase() === "true" ||
-          ["M", "MALE", "GENTS"].includes(String(seat.gender).trim().toUpperCase()) ||
-          ["M", "MALE", "GENTS"].includes(String(seat.seatGender).trim().toUpperCase()) ||
-          ["M", "MALE", "GENTS"].includes(String(seat.passengerSex).trim().toUpperCase()) ||
-          (!isAvailable && !isLadiesSeat);
+        const isMaleSeat = genderCode
+          ? genderCode === "M"
+          : seat.isMale === true ||
+            String(seat.isMale).toLowerCase() === "true" ||
+            ["M", "MALE", "GENTS"].includes(String(seat.gender).trim().toUpperCase()) ||
+            ["M", "MALE", "GENTS"].includes(String(seat.seatGender).trim().toUpperCase()) ||
+            ["M", "MALE", "GENTS"].includes(String(seat.passengerSex).trim().toUpperCase()) ||
+            (!isAvailable && !isLadiesSeat);
 
         const seatName = String(seat.seatName || "").toUpperCase().trim();
         const ezeeSeatCode = String(seat.busSeatType?.code || "").trim().toUpperCase();
