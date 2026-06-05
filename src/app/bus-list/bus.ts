@@ -1,6 +1,8 @@
 import {
   fetchVrlBuses,
   fetchSrsBuses,
+  fetchEzeeBusesV2,
+  fetchEzeeBusesV3,
   fetchCitySuggestions,
   fetchBusFilters,
   NormalizedBus
@@ -14,39 +16,47 @@ export const fetchAllBusData = async (
   vrlDestId?: string | null,
   srsSourceId?: string | null,
   srsDestId?: string | null
+  ezeeSourceCode?: string | null,
+  ezeeDestCode?: string | null
 ) => {
   let vSource = vrlSourceId;
   let vDest = vrlDestId;
   let sSource = srsSourceId;
   let sDest = srsDestId;
+  let eSource = ezeeSourceCode;
+  let eDest = ezeeDestCode;
 
   // 1. Resolve IDs if they are missing
-  if (!vSource || !vDest || !sSource || !sDest) {
+  if (!vSource || !vDest || !sSource || !sDest || !eSource || !eDest) {
     const [sourceRes, destRes] = await Promise.all([
       fetchCitySuggestions(sourceName),
       fetchCitySuggestions(destName)
     ]);
-    const sMatch = sourceRes.find((c: any) => c.name.toLowerCase() === sourceName.toLowerCase());
-    const dMatch = destRes.find((c: any) => c.name.toLowerCase() === destName.toLowerCase());
+    const sMatch = sourceRes.find((c: any) => c.name.toLowerCase() === sourceName.toLowerCase()) || sourceRes[0];
+    const dMatch = destRes.find((c: any) => c.name.toLowerCase() === destName.toLowerCase()) || destRes[0];
     
     if (sMatch && dMatch) {
       vSource = vSource || sMatch.vrlCityId || undefined;
       vDest = vDest || dMatch.vrlCityId || undefined;
       sSource = sSource || sMatch.srsCityId || undefined;
       sDest = sDest || dMatch.srsCityId || undefined;
+      eSource = eSource || sMatch.ezeeStationCode || undefined;
+      eDest = eDest || dMatch.ezeeStationCode || undefined;
     }
   }
 
   // 2. Fetch all data in parallel
-  const [vrl, srs, vrlFiltersData, srsFiltersData] = await Promise.all([
+  const [vrl, srs, ezeeV2, ezeeV3, vrlFiltersData, srsFiltersData] = await Promise.all([
     vSource && vDest ? fetchVrlBuses(sourceName, destName, vSource, vDest, journeyDate) : [],
     sSource && sDest ? fetchSrsBuses(sourceName, destName, sSource, sDest, journeyDate) : [],
+    fetchEzeeBusesV2(sourceName, destName, journeyDate),
+    eSource && eDest ? fetchEzeeBusesV3(sourceName, destName, journeyDate, eSource, eDest) : [],
     vSource && vDest ? fetchBusFilters("VRL", { sourceName, destName, date: journeyDate, sourceId: vSource, destId: vDest }) : null,
     sSource && sDest ? fetchBusFilters("SRS", { sourceName, destName, date: journeyDate, sourceId: sSource, destId: sDest }) : null
   ]);
 
   // 3. Combine Buses
-  let combinedBuses: NormalizedBus[] = [...(vrl || []), ...(srs || [])];
+  let combinedBuses: NormalizedBus[] = [...(vrl || []), ...(srs || []), ...(ezeeV2 || []), ...(ezeeV3 || [])];
 
   // 4. Combine Filters (Boarding / Dropping)
   let combinedBoarding: any[] = [];

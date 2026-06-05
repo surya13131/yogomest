@@ -1222,21 +1222,38 @@ function BusListContent() {
                 }
                 if (displayDuration === "NaNh NaNm") displayDuration = "---";
 
-                const realSeatFields = [
-                  raw.EmptySeats,
-                  raw.emptySeats,
-                  bus.availableSeats,
-                  raw.seatsAvailable,
-                ];
-
                 let displaySeats = 0;
 
-                for (const seat of realSeatFields) {
-                  const num = Number(seat);
+                if (bus.apiProvider?.includes("EZEE")) {
+                  const seats = raw.bus?.seatLayoutList || raw.seatLayoutList || [];
 
-                  if (!isNaN(num) && num >= 0 && num <= 60) {
-                    displaySeats = num;
-                    break;
+                  const availableFromLayout = seats.filter(
+                    (s: any) => s.seatStatus?.code === "AL"
+                  ).length;
+
+                  if (
+                    Number(raw.availableSeatCount) === 0 &&
+                    availableFromLayout > 0
+                  ) {
+                    displaySeats = availableFromLayout;
+                  } else {
+                    displaySeats = Number(raw.availableSeatCount || 0);
+                  }
+                } else {
+                  displaySeats =
+                    Number(
+                      raw.EmptySeats ??
+                      raw.emptySeats ??
+                      raw.seatsAvailable ??
+                      raw.availableSeats ??
+                      raw.AvailableSeats ??
+                      raw.SeatsAvailable ??
+                      bus.availableSeats ??
+                      0
+                    );
+
+                  if (isNaN(displaySeats)) {
+                    displaySeats = 0;
                   }
                 }
 
@@ -1289,9 +1306,6 @@ function BusListContent() {
                           <div className="text-start flex-shrink-0" style={{ width: '60px' }}>
                             <div className="fw-bold text-dark lh-1" style={{ fontSize: "18px" }}>{arrTimeVal}</div>
                             <div className="text-muted mt-1 fw-bold" style={{ fontSize: "11px" }}>{arrTimeAmPm}</div>
-                            <div className="text-danger mt-1 fw-bold text-nowrap" style={{ fontSize: "10px" }}>
-                              {(bus as any).availableSeaterCount || displaySeats} Seats
-                            </div>
                           </div>
                         </div>
 
