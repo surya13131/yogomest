@@ -347,17 +347,20 @@ const handleAuthAction = async (e: React.FormEvent) => {
                 </ul>
               </div>
             ) : (
+          /*
               <div className="d-flex align-items-center ms-4 ms-xxl-4 text-nowrap nav-link-wrapper" onClick={() => setShowAuthModal(true)} style={{ cursor: 'pointer' }}>
                 <Image src={icon6} alt="Login" width={22} height={22} className="me-2" />
                 <span className="fw-medium nav-text-hover" style={{ fontSize: '15px' }}>{t.login}</span>
               </div>
+          */ null
             )}
           </div>
         </div>
       </nav>
 
       {/* AUTH MODAL */}
-      {showAuthModal && (
+      {/* Disabled the login modal window without breaking inner comments */}
+      {false && showAuthModal && (
         <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1060 }}>
           <div className="modal-dialog modal-lg modal-dialog-centered mx-3 mx-md-auto">
             <div className="modal-content border-0 overflow-hidden shadow-lg" style={{ borderRadius: '15px' }}>
@@ -506,12 +509,14 @@ const handleAuthAction = async (e: React.FormEvent) => {
                   </button>
                </li>
             ) : (
+          /*
               <li className="nav-item border-bottom nav-link-wrapper" onClick={() => setShowAuthModal(true)}>
                 <div className="nav-link d-flex align-items-center p-4" data-bs-dismiss="offcanvas" style={{ cursor: 'pointer' }}>
                   <Image src={icon6} alt="Login" width={24} height={24} className="me-3" />
                   <span className="fw-semibold nav-text-hover" style={{ fontSize: '16px' }}>{t.login}</span>
                 </div>
               </li>
+          */ null
             )}
           </ul>
         </div>
