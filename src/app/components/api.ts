@@ -628,8 +628,8 @@ export const fetchEzeeBusesV2 = async (
       return {
         id: bus.tripCode || bus.TripCode || bus.id || Math.random().toString(),
         apiProvider: "EZEE_V2",
-        operatorName: bus.operatorName || bus.travels || bus.TravelsName || "Ezee Travels",
-        busType: bus.busType || bus.BusType || "A/C Sleeper",
+        operatorName: bus?.operator?.name || bus.operatorName || bus.travels || bus.TravelsName || "Ezee Travels",
+        busType: bus?.bus?.displayName || bus?.bus?.busType || bus.busType || bus.BusType || "A/C Sleeper",
         departureTime,
         arrivalTime,
         duration: bus.duration || "---",
@@ -722,8 +722,8 @@ export const fetchEzeeBusesV3 = async (
       return {
         id: bus.tripCode || bus.id || bus.scheduleId || Math.random().toString(),
         apiProvider: "EZEE_V3",
-        operatorName: bus.operatorName || bus.travels || "Ezee Travels",
-        busType: bus.busType || "A/C Sleeper",
+        operatorName: bus?.operator?.name || bus.operatorName || bus.travels || "Ezee Travels",
+        busType: bus?.bus?.displayName || bus?.bus?.busType || bus.busType || "A/C Sleeper",
         departureTime,
         arrivalTime,
         duration: bus.duration || "---",
