@@ -146,7 +146,7 @@ const RenderSeat = React.memo(function RenderSeat({
   const isHorizontalSeat =
     !isVrl &&
     (seat.isRotated || isForcedRotateSeat);
-  
+
   const isInMixedEzeeColumn = (seat as any).isInMixedEzeeColumn;
   const ezeeNeedsSleeperSlot = (seat as any).ezeeNeedsSleeperSlot;
   const ezeeAlignToBottom = (seat as any).ezeeAlignToBottom;
@@ -154,11 +154,11 @@ const RenderSeat = React.memo(function RenderSeat({
   const shouldUseSleeperSlot = (seat.isSleeper || seat.shouldCenterInSleeperSlot || ezeeNeedsSleeperSlot);
 
   const upperId = String(seat.id).toUpperCase();
-  const isRestRoom = ["RRM", "REME", "RM", "RESTROOM", "WASHROOM"].includes(upperId) || (seat as any).isRestRoom || (seat as any).seatType === "RRM";
-  const isEmptySpace = ["FRS", "EMPTY"].includes(upperId);
+  const isRestRoom = ["RRM", "RM", "RESTROOM", "WASHROOM", "RT", "RT1"].includes(upperId) || (seat as any).isRestRoom || (seat as any).seatType === "RRM";
+  const isEmptySpace = ["FRS", "EMPTY"].includes(upperId) || (seat as any).seatType === "FRS";
   const isPantry = ["PTY", "PANTRY"].includes(upperId);
 
-  const gridRowValue = isLegend
+  let gridRowValue = isLegend
     ? "auto"
     : isHorizontalSeat && isMixedBus
     ? `${seat.gridRow}`
@@ -230,6 +230,7 @@ const RenderSeat = React.memo(function RenderSeat({
         gap: "2px",
         transition: "all 0.2s ease-in-out",
         margin: isLegend ? "0 auto" : "0",
+        marginBottom: "0",
       }}
       title={!isLegend ? (isRestRoom ? "Restroom" : (isEmptySpace || isPantry ? seat.id : `Seat ${seat.id} | ₹${seat.fare}`)) : ""}
     >
@@ -295,6 +296,9 @@ const RenderSeat = React.memo(function RenderSeat({
   prevProps.seat.isAvailable === nextProps.seat.isAvailable &&
   prevProps.seat.isLadies === nextProps.seat.isLadies &&
   prevProps.seat.isMale === nextProps.seat.isMale &&
+  prevProps.seat.gridRow === nextProps.seat.gridRow &&
+  prevProps.seat.row === nextProps.seat.row &&
+  prevProps.seat.col === nextProps.seat.col &&
   prevProps.seat.shouldAlignToBottom === nextProps.seat.shouldAlignToBottom &&
   prevProps.seat.shouldCenterInSleeperSlot === nextProps.seat.shouldCenterInSleeperSlot &&
   (prevProps.seat as any).isInMixedEzeeColumn === (nextProps.seat as any).isInMixedEzeeColumn &&
@@ -349,14 +353,31 @@ export default function Step1SeatSelection({
       String(busType).toUpperCase().includes("SEATER") &&
       !String(busType).toUpperCase().includes("SLEEPER");
 
+    const lowerDeckSeatsInDeck = deck.filter(s => !s.isUpper);
+    const lastRow = lowerDeckSeatsInDeck.length > 0 ? Math.max(...lowerDeckSeatsInDeck.map(s => s.row)) : 0;
+
     return deck.map((seat: any) => {
+      if (provider === "EZEE_V2" || provider === "EZEE_V3") {
+        if (seat.seatType) {
+          const tCode = String(seat.seatType).toUpperCase();
+          if (["LSL", "USL", "SL", "SLSL", "SUSL", "WSL"].includes(tCode)) {
+            seat.isSleeper = true;
+          } else if (tCode === "ST") {
+            seat.isSleeper = false;
+          }
+          if (tCode === "RRM") {
+            seat.isRestRoom = true;
+          }
+        }
+      }
+
 const isSS =
   seat.seatType === "SS" ||
   seat.seatType === "Semi Sleeper" ||
   String(seat.id).toUpperCase().includes("SEMI");
       const upperId = String(seat.id).toUpperCase();
-      const isRestRoom = ["RRM", "REME", "RM", "RESTROOM", "WASHROOM"].includes(upperId) || seat.isRestRoom || seat.seatType === "RRM";
-      const isSpecial = ["FRS", "EMPTY", "PTY", "PANTRY"].includes(upperId);
+      const isRestRoom = ["RRM", "RM", "RESTROOM", "WASHROOM", "RT", "RT1"].includes(upperId) || seat.isRestRoom || seat.seatType === "RRM";
+      const isSpecial = ["FRS", "EMPTY", "PTY", "PANTRY"].includes(upperId) || seat.seatType === "FRS";
       
       let isSleeper = isRestRoom ? true : (isSpecial ? false : (isSS ? true : seat.isSleeper));
 
@@ -371,6 +392,40 @@ const isSS =
       if (isSeabird22Seater) {
         isSleeper = false;
         seat.isRotated = false;
+      }
+
+      const isTargetJaiSaiBus =
+        provider === "EZEE_V3" &&
+        operatorName?.trim().toLowerCase() === "jai sai roadlinks" &&
+        String(busType)
+          .toLowerCase()
+          .includes("b9r multi axle volvo semi sleeper");
+
+      if (isTargetJaiSaiBus) {
+        isSleeper = false;
+        seat.isRotated = false;
+      }
+
+      const isTargetVRLBus =
+        provider === "VRL" &&
+        operatorName === "VRL Travels" &&
+        busType?.includes("Gold Class");
+
+      if (
+        isTargetVRLBus &&
+        String(seat.id).toUpperCase() === "L23"
+      ) {
+        console.log("L23 AFTER OVERRIDE", {
+          row: seat.row,
+          oldCol: seat.col,
+          newCol: 1,
+        });
+        return {
+          ...seat,
+          col: 1,
+          isSleeper,
+          isRestRoom,
+        };
       }
 
       return {
@@ -586,6 +641,11 @@ const normalizeColumns = (deckSeats: NormalizedSeat[]) => {
   const computeVisualGrid = (deckSeats: NormalizedSeat[], isVrl: boolean = false): SeatWithGrid[] => {
     if (!deckSeats || deckSeats.length === 0) return [];
 
+    console.log(
+      "GRID INPUT L23",
+      deckSeats.find(s => s.id === "L23")
+    );
+
     const isSrsSleeperSeater =
       provider === "SRS" &&
       busType?.toLowerCase().includes("sleeper") &&
@@ -605,6 +665,29 @@ const normalizeColumns = (deckSeats: NormalizedSeat[]) => {
           row: rowMap.get(seat.row) ?? seat.row,
         }));
       }
+    }
+
+    const isKsmRoadways = operatorName?.toLowerCase().includes("ksm");
+    if (isKsmRoadways) {
+      const colGroups = new Map<number, NormalizedSeat[]>();
+      deckSeats.forEach(seat => {
+        if (!colGroups.has(seat.col)) colGroups.set(seat.col, []);
+        colGroups.get(seat.col)!.push(seat);
+      });
+
+      const maxRow = Math.max(...deckSeats.map(s => s.row));
+
+      const seatsToMove = new Set<string>();
+      colGroups.forEach(colSeats => {
+        const seaters = colSeats.filter(s => !s.isSleeper);
+        if (seaters.length === 1) {
+          seatsToMove.add(seaters[0].id);
+        }
+      });
+
+      deckSeats = deckSeats.map(seat =>
+        seatsToMove.has(seat.id) ? { ...seat, row: maxRow } : seat
+      );
     }
 
     const isRajKalpanaProblemBus =
@@ -642,7 +725,7 @@ const normalizeColumns = (deckSeats: NormalizedSeat[]) => {
       // For VRL, we trust API coordinates but must compress them to avoid large visual gaps.
       // 1. Compress columns to create a standard aisle.
       const colNormalized = normalizeColumns(deckSeats);
-      return colNormalized
+      const result = colNormalized
         .filter((s: any) => Number(s.BlockType) !== 3)
         .map(seat => {
           const isMixedVrl =
@@ -663,6 +746,22 @@ const normalizeColumns = (deckSeats: NormalizedSeat[]) => {
             isLastRow: false,
           };
         });
+
+      // ONLY L23
+      const l23 = result.find(
+        s =>
+          operatorName === "VRL Travels" &&
+          busType?.includes("Gold Class") &&
+          s.id === "L23"
+      );
+
+      if (l23) {
+        l23.col = 1;
+      }
+
+      console.log("FINAL L23", l23);
+
+      return result;
     }
 
     let axisMappedSeats = deckSeats;
@@ -679,6 +778,41 @@ const normalizeColumns = (deckSeats: NormalizedSeat[]) => {
         // We flip them so deckMaxCol becomes 0 (left side).
         col: deckMaxCol - seat.col,
       }));
+
+      console.log(
+        "BEFORE GRID",
+        deckSeats.filter(s => String(s.id).toUpperCase() === "REME")
+      );
+
+      console.log(
+        "AFTER GRID",
+        axisMappedSeats.filter(s => String(s.id).toUpperCase() === "REME")
+      );
+
+      const isTargetJayavin =
+        provider === "EZEE_V3" &&
+        operatorName?.trim().toLowerCase() === "jayavin travels";
+
+      if (provider === "EZEE_V2" || provider === "EZEE_V3") {
+        const lowerDeckSeatsOnly = axisMappedSeats.filter(
+          s => !s.isUpper && String(s.id).toUpperCase() !== "REME"
+        );
+
+        const lastLowerRow =
+          lowerDeckSeatsOnly.length > 0
+            ? Math.max(...lowerDeckSeatsOnly.map(s => s.row))
+            : 0;
+
+        axisMappedSeats = axisMappedSeats.map(s =>
+          String(s.id).toUpperCase() === "REME"
+            ? {
+                ...s,
+                row: isTargetJayavin ? lastLowerRow : lastLowerRow + 2,
+                col: 1                 // center position
+              }
+            : s
+        );
+      }
 
       // Compress columns to avoid giant aisle gaps
       const usedCols = [...new Set(axisMappedSeats.map(s => s.col))].sort((a, b) => a - b);
@@ -710,7 +844,7 @@ const normalizeColumns = (deckSeats: NormalizedSeat[]) => {
       axisMappedSeats = axisMappedSeats.map(seat => {
         let mappedCol = colMap.get(seat.col)!;
         const upperId = String(seat.id).toUpperCase();
-        const isRestRoom = ["RRM", "REME", "RM", "RESTROOM", "WASHROOM"].includes(upperId) || (seat as any).isRestRoom || (seat as any).seatType === "RRM";
+        const isRestRoom = ["RRM", "RM", "RESTROOM", "WASHROOM", "RT", "RT1"].includes(upperId) || (seat as any).isRestRoom || (seat as any).seatType === "RRM";
         const isRotated = lastSeats.includes(seat.id) || seat.isRotated;
 
         if (isRestRoom) {
@@ -1214,6 +1348,11 @@ if (
       return result;
     }
 
+    console.log(
+      "FINAL REME",
+      colNormalized.find(s => String(s.id).toUpperCase() === "REME")
+    );
+
     const visualGridResult = colNormalized.map(seat => {
       const gridRowForApiRow = rowMap.get(seat.row)!;
       const seatsInSameRow = colNormalized.filter(s => s.row === seat.row);
@@ -1277,6 +1416,143 @@ if (
       }))
     );
 
+    const isAbineshBus =
+      provider === "EZEE_V3" &&
+      operatorName?.toLowerCase().includes("abinesh");
+
+    if (isAbineshBus) {
+      return visualGridResult.map((seat: any) => {
+        const id = String(seat.id).toUpperCase();
+
+        // Lower deck seaters only
+        if (!seat.isUpper && /^S\d+$/.test(id)) {
+          return {
+            ...seat,
+            gridRow: seat.row + 3, // S1=4, S2=5, S3=6...
+          };
+        }
+
+        // Lower restroom
+        if (!seat.isUpper && id === "RT1") {
+          return {
+            ...seat,
+            gridRow: 2,
+          };
+        }
+
+        return seat;
+      });
+    }
+
+    const isVaradSleeper =
+      provider === "EZEE_V3" &&
+      operatorName?.trim().toLowerCase() === "varad lines" &&
+      busType?.toLowerCase().includes("2+1") &&
+      busType?.toLowerCase().includes("bharatbenz sleeper");
+
+    if (isVaradSleeper) {
+      const absoluteMaxRow = Math.max(
+        ...visualGridResult
+          .filter(s => String(s.id).toUpperCase() !== "REME")
+          .map(s => s.gridRow)
+      );
+
+      return visualGridResult.map((seat: any) => {
+        if (String(seat.id).toUpperCase() === "REME") {
+          return {
+            ...seat,
+            gridRow: absoluteMaxRow + 1,
+            col: 1,
+          };
+        }
+        return seat;
+      });
+    }
+
+    if (isKsmRoadways) {
+      const maxGridRow = Math.max(
+        ...visualGridResult.map((s: any) => s.gridRow || 0)
+      );
+
+      // Find all seaters in column 1
+      const col1Seaters = visualGridResult.filter(
+        (s: any) => !s.isSleeper && s.col === 1
+      );
+
+      // Force the last/single seater to bottom row
+      if (col1Seaters.length > 0) {
+        const targetSeat = col1Seaters[col1Seaters.length - 1];
+
+        targetSeat.gridRow = maxGridRow;
+
+        console.log("[KSM FORCE BOTTOM]", targetSeat.id, targetSeat.gridRow);
+      }
+    }
+
+    if (provider === "EZEE_V2" || provider === "EZEE_V3") {
+      const col1Seaters = visualGridResult.filter(
+        (s: any) => !s.isSleeper && s.col === 1
+      );
+
+      if (col1Seaters.length === 1) {
+        const maxGridRow = Math.max(
+          ...visualGridResult.map((s: any) => s.gridRow || 0)
+        );
+
+        col1Seaters[0].gridRow = maxGridRow;
+        col1Seaters[0].shouldAlignToBottom = true;
+      }
+
+      console.log(
+        "COL1 SEATERS",
+        visualGridResult
+          .filter((s: any) => !s.isSleeper && s.col === 1)
+          .map((s: any) => ({ id: s.id, col: s.col, gridRow: s.gridRow }))
+      );
+    }
+
+    const isSriBalaji =
+      provider === "EZEE_V3" &&
+      operatorName?.toLowerCase().includes("sri balaji");
+
+    if (isSriBalaji) {
+      visualGridResult.forEach((seat: any) => {
+        if (seat.id === "L11" || seat.seatType === "FRS" || String(seat.id).toUpperCase() === "FRS") {
+          seat.col = 1; // side column
+        }
+      });
+    }
+
+    const isTargetJayavin =
+      provider === "EZEE_V3" &&
+      operatorName?.trim().toLowerCase() === "jayavin travels" &&
+      busType?.toLowerCase().includes("2+1") &&
+      busType?.toLowerCase().includes("seater") &&
+      busType?.toLowerCase().includes("sleeper");
+
+    if (isTargetJayavin) {
+      const floatingSeat = visualGridResult.find(
+        s =>
+          !s.isSleeper &&
+          !s.isUpper &&
+          s.col === 0
+      );
+
+      if (floatingSeat) {
+        floatingSeat.gridRow += 1;
+      }
+
+      const l6 = visualGridResult.find(s => s.id === "L6");
+      const reme = visualGridResult.find(
+        s => String(s.id).toUpperCase() === "REME"
+      );
+
+      if (l6 && reme) {
+        reme.gridRow = (l6.gridRow || 12) - 0;
+        reme.col = 1;
+      }
+    }
+
     return visualGridResult;
   };
 
@@ -1289,6 +1565,22 @@ if (
   const normalizedUpperDeckSeats = useMemo(
     () => computeVisualGrid(correctedUpperDeckSeats, isVrl), // isLowerDeck is inferred inside
     [correctedUpperDeckSeats, isVrl, busType, operatorName, provider, lastSeats]
+  );
+
+  console.log(
+    "PRE-RENDER L23",
+    normalizedLowerDeckSeats.find((s: any) => s.id === "L23")
+  );
+
+  console.log(
+    "[Abinesh Debug]",
+    normalizedLowerDeckSeats
+      .filter((s: any) => ["RT1", "S1", "S2", "S3"].includes(s.id))
+      .map((s: any) => ({
+        id: s.id,
+        row: s.row,
+        gridRow: s.gridRow,
+      }))
   );
 
 const maxCol = isHard49SeaterBus
@@ -1327,6 +1619,13 @@ const maxCol = isHard49SeaterBus
     const lower = busType.toLowerCase();
     return lower.includes("seater") && lower.includes("sleeper");
   }, [busType]);
+
+  const extraGapBus =
+    provider === "EZEE_V3" &&
+    (
+      operatorName?.trim().toLowerCase() === "hero bus" ||
+      operatorName?.trim().toLowerCase() === "spr tours and travels"
+    );
 
   const legendSeat = (overrides: Partial<NormalizedSeat>): NormalizedSeat => ({
     id: "",
@@ -1574,7 +1873,7 @@ const maxCol = isHard49SeaterBus
                     height: "max-content",
                     display: "flex",
                     flexDirection: "column",
-                    paddingBottom: "30px",
+                    paddingBottom: extraGapBus ? "70px" : "30px",
                     paddingTop: "62px",
                   }}
                 >
@@ -1608,7 +1907,7 @@ const maxCol = isHard49SeaterBus
                     height: "max-content",
                     display: "flex",
                     flexDirection: "column",
-                    paddingBottom: "30px",
+                    paddingBottom: extraGapBus ? "70px" : "30px",
                     paddingTop: "62px",
                   }}
                 >

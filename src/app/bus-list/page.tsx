@@ -312,60 +312,6 @@ function BusListContent() {
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
 
   const [selectedDay, setSelectedDay] = useState("");
-  const [filtersLoaded, setFiltersLoaded] = useState(false);
-
-  useEffect(() => {
-    const saved = sessionStorage.getItem("busFilters");
-    if (saved) {
-      try {
-        const filters = JSON.parse(saved);
-        if (filters.selectedOperators) setSelectedOperators(filters.selectedOperators);
-        if (filters.selectedBoardingPoints) setSelectedBoarding(filters.selectedBoardingPoints);
-        if (filters.selectedDroppingPoints) setSelectedDropping(filters.selectedDroppingPoints);
-        if (filters.selectedDepTimes) setSelectedDepTimes(filters.selectedDepTimes);
-        if (filters.selectedArrTimes) setSelectedArrTimes(filters.selectedArrTimes);
-        if (filters.selectedBusTypes) setSelectedBusTypes(filters.selectedBusTypes);
-        if (filters.selectedAmenities) setSelectedAmenities(filters.selectedAmenities);
-        if (filters.selectedFeatures) setSelectedFeatures(filters.selectedFeatures);
-        if (filters.activeFilter !== undefined) setActiveFilter(filters.activeFilter);
-        if (filters.openAccordion !== undefined) setOpenAccordion(filters.openAccordion);
-      } catch (e) {
-        console.error("Failed to load filters", e);
-      }
-    }
-    setFiltersLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (!filtersLoaded) return;
-    sessionStorage.setItem(
-      "busFilters",
-      JSON.stringify({
-        selectedOperators,
-        selectedBoardingPoints: selectedBoarding,
-        selectedDroppingPoints: selectedDropping,
-        selectedDepTimes,
-        selectedArrTimes,
-        selectedBusTypes,
-        selectedAmenities,
-        selectedFeatures,
-        activeFilter,
-        openAccordion
-      })
-    );
-  }, [
-    selectedOperators,
-    selectedBoarding,
-    selectedDropping,
-    selectedDepTimes,
-    selectedArrTimes,
-    selectedBusTypes,
-    selectedAmenities,
-    selectedFeatures,
-    activeFilter,
-    openAccordion,
-    filtersLoaded
-  ]);
 
   useEffect(() => {
     const todayStr = formatApiDate(new Date());
@@ -376,10 +322,6 @@ function BusListContent() {
     if (journeyDate === todayStr) setSelectedDay("today");
     else if (journeyDate === tomorrowStr) setSelectedDay("tomorrow");
     else setSelectedDay("custom");
-
-    if (typeof window !== "undefined") {
-      localStorage.setItem('yesgo_selected_date', journeyDate);
-    }
   }, [journeyDate]);
 
   useEffect(() => {
@@ -536,7 +478,6 @@ function BusListContent() {
     const todayStr = formatApiDate(new Date());
     setJourneyDate(todayStr);
     setSelectedDay("today");
-    if (typeof window !== "undefined") localStorage.setItem('yesgo_selected_date', todayStr);
   };
 
   const handleTomorrow = () => {
@@ -545,13 +486,11 @@ function BusListContent() {
     const tomorrowStr = formatApiDate(tomorrow);
     setJourneyDate(tomorrowStr);
     setSelectedDay("tomorrow");
-    if (typeof window !== "undefined") localStorage.setItem('yesgo_selected_date', tomorrowStr);
   };
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.value) {
       setJourneyDate(e.target.value);
-      if (typeof window !== "undefined") localStorage.setItem('yesgo_selected_date', e.target.value);
     }
   };
 
@@ -566,7 +505,24 @@ function BusListContent() {
     setSelectedSource(null);
     if (val.length >= 2) {
       const results = await fetchCitySuggestions(val);
-      setSourceOptions(results);
+      const filtered = results.sort((a, b) => {
+        const search = val.toLowerCase();
+        const aStarts = (a.name || "").toLowerCase().startsWith(search);
+        const bStarts = (b.name || "").toLowerCase().startsWith(search);
+        if (aStarts && !bStarts) return -1;
+        if (!aStarts && bStarts) return 1;
+        return (a.name || "").localeCompare(b.name || "");
+      });
+      setSourceOptions(filtered);
+      setShowSourceDropdown(true);
+    } else if (val.length === 0) {
+      const recent = JSON.parse(localStorage.getItem("recentCities") || "[]");
+      if (recent.length > 0) {
+        setSourceOptions(recent);
+      } else {
+        const results = await fetchCitySuggestions("a");
+        setSourceOptions(results.sort((a, b) => (a.name || "").localeCompare(b.name || "")));
+      }
       setShowSourceDropdown(true);
     } else {
       setSourceOptions([]);
@@ -580,7 +536,24 @@ function BusListContent() {
     setSelectedDest(null);
     if (val.length >= 2) {
       const results = await fetchCitySuggestions(val);
-      setDestOptions(results);
+      const filtered = results.sort((a, b) => {
+        const search = val.toLowerCase();
+        const aStarts = (a.name || "").toLowerCase().startsWith(search);
+        const bStarts = (b.name || "").toLowerCase().startsWith(search);
+        if (aStarts && !bStarts) return -1;
+        if (!aStarts && bStarts) return 1;
+        return (a.name || "").localeCompare(b.name || "");
+      });
+      setDestOptions(filtered);
+      setShowDestDropdown(true);
+    } else if (val.length === 0) {
+      const recent = JSON.parse(localStorage.getItem("recentCities") || "[]");
+      if (recent.length > 0) {
+        setDestOptions(recent);
+      } else {
+        const results = await fetchCitySuggestions("a");
+        setDestOptions(results.sort((a, b) => (a.name || "").localeCompare(b.name || "")));
+      }
       setShowDestDropdown(true);
     } else {
       setDestOptions([]);
@@ -650,8 +623,8 @@ function BusListContent() {
 
           const cleanStr = (name: string) => (name || "").split("(")[0].trim().toLowerCase();
 
-          const sMatch = sourceRes.find((c: any) => cleanStr(c.name) === cleanStr(urlSourceName)) || sourceRes[0];
-          const dMatch = destRes.find((c: any) => cleanStr(c.name) === cleanStr(urlDestName)) || destRes[0];
+          const sMatch = sourceRes.find((c: any) => cleanStr(c.name) === cleanStr(urlSourceName));
+          const dMatch = destRes.find((c: any) => cleanStr(c.name) === cleanStr(urlDestName));
 
           if (sMatch) {
             vSource = vSource || sMatch.vrlCityId || null;
@@ -692,10 +665,15 @@ function BusListContent() {
 
         const combined = combinedRaw
           .filter(bus => getAvailableSeats(bus) > 0)
-          .map(bus => ({
-            ...bus,
-            rating: getSimulatedRating(bus)
-          }));
+          .map(bus => {
+            return {
+              ...bus,
+              // Directly use the price calculated in api.ts
+              // It now correctly reflects the minimum available fare.
+              price: bus.price,
+              rating: getSimulatedRating(bus)
+            };
+          });
 
         console.log(
           "AFTER FILTER",
@@ -1243,13 +1221,31 @@ function BusListContent() {
               <div className="d-flex flex-column w-100 position-relative">
                 <span style={{ fontSize: "12px", color: "#6B7280" }}>{t.from || "From"}</span>
                 <input type="text" value={inputSource} onChange={handleSourceChange}
-                  onFocus={() => setShowSourceDropdown(true)} onBlur={() => setTimeout(() => setShowSourceDropdown(false), 200)}
+                  onFocus={async () => {
+                    setShowSourceDropdown(true);
+                    if (inputSource.length === 0) {
+                      const recent = JSON.parse(localStorage.getItem("recentCities") || "[]");
+                      if (recent.length > 0) {
+                        setSourceOptions(recent);
+                      } else {
+                        const results = await fetchCitySuggestions("a");
+                        setSourceOptions(results.sort((a, b) => (a.name || "").localeCompare(b.name || "")));
+                      }
+                    }
+                  }} onBlur={() => setTimeout(() => setShowSourceDropdown(false), 200)}
                   className="search-input" />
                 {showSourceDropdown && sourceOptions.length > 0 && (
                   <ul className="list-group position-absolute w-100 shadow" style={{ zIndex: 1050, top: '100%', left: 0, maxHeight: '250px', overflowY: 'auto' }}>
                     {sourceOptions.map((city, idx) => (
                       <li key={idx} className="list-group-item list-group-item-action py-2" style={{ cursor: 'pointer', fontSize: '14px' }}
-                        onMouseDown={() => { setInputSource(city.name); setSelectedSource(city); setShowSourceDropdown(false); }}>
+                        onMouseDown={() => { 
+                          setInputSource(city.name); 
+                          setSelectedSource(city); 
+                          setShowSourceDropdown(false); 
+                          const recent = JSON.parse(localStorage.getItem("recentCities") || "[]");
+                          const updated = [city, ...recent.filter((c: any) => c.name !== city.name)].slice(0, 5);
+                          localStorage.setItem("recentCities", JSON.stringify(updated));
+                        }}>
                         <i className="bi bi-geo-alt me-2 text-muted"></i>
                         <span className="fw-medium">{city.name}</span>
                         <span className="text-muted small ms-1">, {city.state}</span>
@@ -1266,13 +1262,31 @@ function BusListContent() {
               <div className="d-flex flex-column w-100 position-relative">
                 <span style={{ fontSize: "12px", color: "#6B7280" }}>{t.to || "To"}</span>
                 <input type="text" value={inputDest} onChange={handleDestChange}
-                  onFocus={() => setShowDestDropdown(true)} onBlur={() => setTimeout(() => setShowDestDropdown(false), 200)}
+                  onFocus={async () => {
+                    setShowDestDropdown(true);
+                    if (inputDest.length === 0) {
+                      const recent = JSON.parse(localStorage.getItem("recentCities") || "[]");
+                      if (recent.length > 0) {
+                        setDestOptions(recent);
+                      } else {
+                        const results = await fetchCitySuggestions("a");
+                        setDestOptions(results.sort((a, b) => (a.name || "").localeCompare(b.name || "")));
+                      }
+                    }
+                  }} onBlur={() => setTimeout(() => setShowDestDropdown(false), 200)}
                   className="search-input" />
                 {showDestDropdown && destOptions.length > 0 && (
                   <ul className="list-group position-absolute w-100 shadow" style={{ zIndex: 1050, top: '100%', left: 0, maxHeight: '250px', overflowY: 'auto' }}>
                     {destOptions.map((city, idx) => (
                       <li key={idx} className="list-group-item list-group-item-action py-2" style={{ cursor: 'pointer', fontSize: '14px' }}
-                        onMouseDown={() => { setInputDest(city.name); setSelectedDest(city); setShowDestDropdown(false); }}>
+                        onMouseDown={() => { 
+                          setInputDest(city.name); 
+                          setSelectedDest(city); 
+                          setShowDestDropdown(false); 
+                          const recent = JSON.parse(localStorage.getItem("recentCities") || "[]");
+                          const updated = [city, ...recent.filter((c: any) => c.name !== city.name)].slice(0, 5);
+                          localStorage.setItem("recentCities", JSON.stringify(updated));
+                        }}>
                         <i className="bi bi-geo-alt me-2 text-muted"></i>
                         <span className="fw-medium">{city.name}</span>
                       </li>
@@ -1358,16 +1372,14 @@ function BusListContent() {
               displayedBuses.map((bus) => {
                 const displayBusName = translatedNames[bus.operatorName] || bus.operatorName || "V Bus Holidays";
                 const raw = bus.originalData || {};
-
                 const displayBusType = getBusType(bus);
-
-                let displayPrice = bus.price;
-                if (!displayPrice || displayPrice === 0 || isNaN(displayPrice)) {
-                  displayPrice = raw.TotalFare || raw.LowestFare || raw.minFare || raw.price || raw.fare ||
-                    raw.AcSleeperRate || raw.AcSeatRate || raw.GeneralRate || 0;
-                  if (raw.fareList?.length > 0) displayPrice = Math.min(...raw.fareList);
-                  else if (raw.stageFare?.length > 0) displayPrice = Math.min(...raw.stageFare.map((f: any) => f.fare));
-                }
+                
+                console.log(
+                  bus.operatorName,
+                  bus.apiProvider,
+                  bus.price,
+                  bus.originalData
+                );
 
                 const displayDepTime = formatTime(bus.departureTime || "");
 
@@ -1445,8 +1457,8 @@ function BusListContent() {
                         <div className="col-12 col-md-3 d-flex flex-row flex-md-column justify-content-between align-items-center align-items-md-end mt-1 mt-md-0 ps-md-2">
                           <div className="d-flex flex-column align-items-start align-items-md-end flex-shrink-0">
                             <span className="text-muted mb-1 d-none d-md-block" style={{ fontSize: "11px" }}>Starts from</span>
-                            <div className="d-flex align-items-baseline gap-1 mb-0 mb-md-2">
-                              <span className="fw-bold text-dark lh-1" style={{ fontSize: "20px" }}>₹{displayPrice > 0 ? displayPrice : 750}</span>
+                            <div className="d-flex align-items-baseline gap-1 mb-0 mb-md-2"> {/* Use bus.price directly */}
+                              <span className="fw-bold text-dark lh-1" style={{ fontSize: "20px" }}>₹{bus.price > 0 ? bus.price : 750}</span>
                             </div>
                           </div>
                           <button onClick={() => handleViewSeats(bus)} className="view-seats-btn shadow-sm w-100 ms-3 ms-md-0" style={{ fontSize: '13px', padding: '8px 0', maxWidth: '140px' }}>

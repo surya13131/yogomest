@@ -32,8 +32,12 @@ export const fetchAllBusData = async (
       fetchCitySuggestions(sourceName),
       fetchCitySuggestions(destName)
     ]);
-    const sMatch = sourceRes.find((c: any) => c.name.toLowerCase() === sourceName.toLowerCase()) || sourceRes[0];
-    const dMatch = destRes.find((c: any) => c.name.toLowerCase() === destName.toLowerCase()) || destRes[0];
+    const sMatch = sourceRes.find((c: any) => c.name.toLowerCase() === sourceName.toLowerCase());
+    const dMatch = destRes.find((c: any) => c.name.toLowerCase() === destName.toLowerCase());
+
+    if (!sMatch || !dMatch) {
+      throw new Error("City must be selected from dropdown");
+    }
     
     if (sMatch && dMatch) {
       vSource = vSource || sMatch.vrlCityId || undefined;

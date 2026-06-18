@@ -50,6 +50,67 @@ const extractValidPrice = (bus: any): number => {
   return 0;
 };
 
+export const getMinimumAvailableFare = (raw: any): number => {
+  const fares: number[] = [];
+
+  // SRS
+  const available = raw?.bus_layout?.available;
+  if (typeof available === "string") {
+    available.split(",").forEach((item: string) => {
+      const fare = Number(item.split("|")[1]);
+      if (!isNaN(fare) && fare > 0) fares.push(fare);
+    });
+  }
+
+  // EZEE
+  const seatLayoutList =
+    raw?.seatLayoutList ||
+    raw?.bus?.seatLayoutList ||
+    raw?.data?.seatLayoutList ||
+    raw?.data?.bus?.seatLayoutList;
+
+  if (Array.isArray(seatLayoutList)) {
+    seatLayoutList.forEach((seat: any) => {
+      const available =
+        seat.seatStatus?.code === "AL" ||
+        seat.available === true ||
+        seat.isAvailable === true;
+
+      const fare = Number(
+        seat.fare ??
+        seat.seatFare ??
+        seat.price
+      );
+
+      if (available && !isNaN(fare) && fare > 0) {
+        fares.push(fare);
+      }
+    });
+  }
+
+  // VRL
+  const seatDetails =
+    raw?.SeatDetails ||
+    raw?.seatDetails ||
+    raw?.Seats ||
+    raw?.seats;
+
+  if (Array.isArray(seatDetails)) {
+    seatDetails.forEach((seat: any) => {
+      const available =
+        seat.IsAvailable === true ||
+        seat.isAvailable === true ||
+        seat.Status === "Available";
+
+      const fare = Number(seat.Fare ?? seat.fare ?? seat.Price);
+      if (available && !isNaN(fare) && fare > 0) {
+        fares.push(fare);
+      }
+    });
+  }
+
+  return fares.length > 0 ? Math.min(...fares) : 0;
+};
 
 export const requestLoginOtp = async (mobileNumber: string) => {
   const res = await fetch(`${BASE_URL}/api/user/signin?mobile=${mobileNumber}`, {
@@ -275,7 +336,7 @@ export const fetchVrlBuses = async (
         departureTime: bus.RouteTime || bus.DeptTime || bus.departureTime || "--:--",
         arrivalTime: bus.ApproxArrival || bus.ArrivalTime || bus.arrivalTime || "--:--",
         duration: bus.TravelTime || bus.Duration || bus.duration || "--",
-        price: extractValidPrice(bus), // ✅ FIXED PRICE EXTRACTION
+        price: getMinimumAvailableFare(bus) || extractValidPrice(bus),
         availableSeats: bus.EmptySeats || bus.AvailableSeats || bus.availableSeats || 0,
         rating: "4.5",
         apiProvider: "VRL",
@@ -305,8 +366,20 @@ export const fetchSrsBuses = async (
   destId: string,
   date: string
 ): Promise<NormalizedBus[]> => {
+  const getSrsMinAvailableFare = (bus: any): number => {
+    const available = bus?.bus_layout?.available ?? "";
+
+    const fares = available
+      .split(",")
+      .map((item: string) => Number(item.split("|")[1]))
+      .filter((v: number) => !isNaN(v) && v > 0);
+
+    return fares.length ? Math.min(...fares) : 0;
+  };
+
   const mapData = (data: any[]): NormalizedBus[] =>
     data.map((bus: any): NormalizedBus => { 
+      const srsMinFare = getSrsMinAvailableFare(bus);
       return {
         id: bus.id?.toString() || Math.random().toString(),
         operatorName: bus.operator_service_name?.trim() || bus.operatorName || "SRS Travels",
@@ -314,7 +387,7 @@ export const fetchSrsBuses = async (
         departureTime: bus.dep_time || bus.departureTime || "--:--",
         arrivalTime: bus.arr_time || bus.arrivalTime || "--:--",
         duration: bus.duration || "--",
-        price: extractValidPrice(bus), // ✅ FIXED PRICE EXTRACTION
+        price: srsMinFare > 0 ? srsMinFare : extractValidPrice(bus),
         availableSeats: bus.available_seats || bus.availableSeats || 0,
         rating: "4.6",
         apiProvider: "SRS", 
@@ -633,7 +706,7 @@ export const fetchEzeeBusesV2 = async (
         departureTime,
         arrivalTime,
         duration: bus.duration || "---",
-        price: extractValidPrice(bus),
+        price: getMinimumAvailableFare(bus) || extractValidPrice(bus),
         availableSeats: calculatedAvailableSeats > 0 ? calculatedAvailableSeats : parseInt(bus.availableSeats || bus.seatsAvailable || bus.AvailableSeats || "0", 10),
         availableSeaterCount: availableSeaterCount > 0 ? availableSeaterCount : undefined,
         availableSleeperCount: availableSleeperCount > 0 ? availableSleeperCount : undefined,
@@ -727,7 +800,7 @@ export const fetchEzeeBusesV3 = async (
         departureTime,
         arrivalTime,
         duration: bus.duration || "---",
-        price: extractValidPrice(bus),
+        price: getMinimumAvailableFare(bus) || extractValidPrice(bus),
         availableSeats: calculatedAvailableSeats > 0 ? calculatedAvailableSeats : parseInt(bus.availableSeats || bus.seatsAvailable || "0", 10),
         availableSeaterCount: availableSeaterCount > 0 ? availableSeaterCount : undefined,
         availableSleeperCount: availableSleeperCount > 0 ? availableSleeperCount : undefined,
@@ -798,8 +871,10 @@ export const fetchEzeeSeatLayout = async (
   date: string
 ) => {
   try {
+    const cleanDate = String(date || "").includes("T") ? String(date).split("T")[0] : date;
+
     // 🛡️ SHIELD: Protect against missing params
-    if (!sourceStationCode || !destStationCode || !tripCode) {
+    if (!sourceStationCode || !destStationCode || !tripCode || sourceStationCode === "undefined" || destStationCode === "undefined") {
       console.warn("[Ezee Seat Shield] Missing parameters for Ezee seat layout. Aborting fetch.");
       return null;
     }
@@ -809,7 +884,7 @@ export const fetchEzeeSeatLayout = async (
       tripCode
     )}/${encodeURIComponent(sourceStationCode)}/${encodeURIComponent(
       destStationCode
-    )}/${encodeURIComponent(date)}`;
+    )}/${encodeURIComponent(cleanDate)}`;
     
     const cached = getCachedData(url);
     if (cached) return cached;
@@ -819,7 +894,8 @@ export const fetchEzeeSeatLayout = async (
     const res = await fetch(url);
 
     if (!res.ok) {
-      console.error(`[Ezee Seat Shield] API failed with status ${res.status}`);
+      const errorText = await res.text().catch(() => "No error text available");
+      console.error(`[Ezee Seat Shield] API failed with status ${res.status} | URL: ${url} | Msg: ${errorText}`);
       return null;
     }
 

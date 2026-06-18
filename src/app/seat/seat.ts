@@ -22,6 +22,7 @@ export interface NormalizedSeat {
   orientation?: number;
   seatType?: string;
   shouldCenterInSleeperSlot?: boolean;
+  originalColumn?: number;
 }
 const fullDecodeBusType = (raw: string): string => {
   if (!raw || raw === "undefined" || raw === "null") return "";
@@ -542,6 +543,30 @@ export const fixBrokenSeatLayout = (
   // to prevent column compression and other destructive transformations that remove the aisle.
   if (provider === "EZEE_V2" || provider === "EZEE_V3") {
     console.log("[Layout] EZEE provider detected. Bypassing all layout repair logic.");
+
+    const isAbineshBus =
+      provider === "EZEE_V3" &&
+      operatorName?.toLowerCase().includes("abinesh");
+
+    if (isAbineshBus) {
+      console.log("[Layout] Applying Abinesh-specific coordinate adjustments.");
+
+      return seats.map((seat) => {
+        const id = String(seat.id).toUpperCase();
+
+        // Lower deck restroom
+        if (!seat.isUpper && id === "RT1") {
+          return {
+            ...seat,
+            row: 1,
+            col: 4,
+          };
+        }
+
+        return seat;
+      });
+    }
+
     return seats;
   }
 
@@ -791,7 +816,9 @@ if (is21SleeperBus(busType) && provider !== "EZEE_V2" && provider !== "EZEE_V3")
 
   console.log(`[Layout] Final — lower: ${reLower.length} seats, upper: ${reUpper.length} seats`);
 
-  return [...reLower, ...reUpper];
+  const finalSeats = [...reLower, ...reUpper];
+
+  return finalSeats;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -799,7 +826,8 @@ if (is21SleeperBus(busType) && provider !== "EZEE_V2" && provider !== "EZEE_V3")
 // ─────────────────────────────────────────────────────────────────────────────
 const applyBusTypeRules = (
   seats: NormalizedSeat[],
-  busType: string
+  busType: string,
+  operatorName?: string
 ): NormalizedSeat[] => {
   if (!seats || seats.length === 0) return seats;
 
@@ -845,13 +873,21 @@ const applyBusTypeRules = (
     let isSleeper =
       seat.isSleeper === true ||
       isSleeperByName ||
-      isSleeperBySize;
+      isSleeperBySize; 
+
+    const isRjTravelsProblemBus =
+      operatorName?.toUpperCase().includes("RJ TRAVELS") &&
+      busTypeStr.includes("VOLVO MULTI AXLE SEMI SLEEPER");
 
     // ✅ FIX: Force all seats in a 2+2 normal bus to be seaters
     const isTrueMixedLayout = busTypeStr.includes("SLEEPER") && busTypeStr.includes("SEATER");
   if (is22Bus && !isTrueMixedLayout && !isSleeperByName) {
   isSleeper = false;
 }
+    // Targeted fix for RJ TRAVELS specific bus type
+    if (isRjTravelsProblemBus) {
+      isSleeper = false; // Force seats to be non-sleeper
+    }
 
     return { ...seat, isSleeper, isUpper };
   });
@@ -927,11 +963,14 @@ export const fetchSeatLayoutData = async ({
   // EZEE API
   // ═══════════════════════════════════════════════════════════════════════════
   if ((provider === "EZEE_V2" || provider === "EZEE_V3") && tripCode) {
+    let cleanDoj = String(doj || "").trim();
+    if (cleanDoj.includes("T")) cleanDoj = cleanDoj.split("T")[0];
+
     const rawData = await fetchEzeeSeatLayout(
       tripCode,
       ezeeSourceId || sId,
       ezeeDestId   || dId,
-      doj
+      cleanDoj
     );
 
     console.log("[EZEE seat.ts] EZEE seat API response:", rawData);
@@ -1036,7 +1075,8 @@ export const fetchSeatLayoutData = async ({
         if (!seat || typeof seat !== "object") return false;
         // Per EZEE docs, filter out non-passenger layout blocks.
         const busSeatTypeCode = seat.busSeatType?.code;
-        if (["FRS"].includes(busSeatTypeCode)) { // keep RRM and PTY to render icons
+        const isSriBalaji = String(operatorName || "").toLowerCase().includes("sri balaji");
+        if (["FRS"].includes(busSeatTypeCode) && !isSriBalaji) { // keep RRM and PTY to render icons
           return false;
         }
 
@@ -1256,6 +1296,7 @@ export const fetchSeatLayoutData = async ({
             id:          seatName,
             row:         rowVal,
             col:         colVal,
+            originalColumn: colVal,
             isUpper,
             isAvailable,
             isLadies:    isLadiesSeat,
@@ -1274,8 +1315,8 @@ export const fetchSeatLayoutData = async ({
 
       // ── Trust-But-Verify pipeline ────────────────────────────────────────
       fetchedSeats = normalizeSeatCoordinates(fetchedSeats);
-      fetchedSeats = fixBrokenSeatLayout(provider, fetchedSeats, detectedBusType, operatorName);
-      fetchedSeats = applyBusTypeRules(fetchedSeats, detectedBusType);
+      fetchedSeats = fixBrokenSeatLayout(provider, fetchedSeats, detectedBusType, operatorName); // operatorName already passed here
+      fetchedSeats = applyBusTypeRules(fetchedSeats, detectedBusType, operatorName);
     }
   }
 
@@ -1493,7 +1534,7 @@ export const fetchSeatLayoutData = async ({
         console.log("[Layout] Applying Sri Balaji sleeper fix");
         fetchedSeats = formatSriBalajiLayout(fetchedSeats, detectedBusType);
       }
-      fetchedSeats = applyBusTypeRules(fetchedSeats, detectedBusType);
+      fetchedSeats = applyBusTypeRules(fetchedSeats, detectedBusType, operatorName); // Pass operatorName
     }
   }
 
@@ -1518,7 +1559,7 @@ export const fetchSeatLayoutData = async ({
     tripDestId,
     rawLayout:      rawLayoutStorage,
     busType:        detectedBusType,
-    lastSeats,
+    lastSeats, // This was `lastSeats` for SRS and `rawLayout.lastSeats` for VRL/EZEE, now consistently populated.
   };
 };
 
