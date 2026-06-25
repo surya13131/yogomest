@@ -30,14 +30,7 @@ export default function Step3PassengerInfo({
   insurance, setInsurance, hasGst, setHasGst, gstDetails, setGstDetails, selectedSeats, busType
 }: Step3Props) {
 
-  // ✅ FIX: Save passenger details to localStorage so CheckoutPage can read Age & Gender
-  useEffect(() => {
-    if (passengers && passengers.length > 0) {
-      localStorage.setItem('localPassengerDetails', JSON.stringify(passengers));
-    }
-  }, [passengers]);
-
-  // ✅ FIX: Forcefully clean auto-filled or initial phone numbers containing +91 or 91
+  // ✅ Forcefully clean auto-filled or initial phone numbers containing +91 or 91
   useEffect(() => {
     if (contactPhone && /^(\+91\s*|91\s*)/.test(contactPhone)) {
       setContactPhone(contactPhone.replace(/^(\+91\s*|91\s*)/, ''));

@@ -301,6 +301,19 @@ function SeatLayoutContent() {
 
       setIsBlocking(true);
 
+      // ✅ FIX: Save complete passenger details to localStorage just before blocking seats.
+      const passengerDetails = passengers.map((p) => ({
+        name: p.name,
+        age: p.age,
+        gender: p.gender,
+        seatId: p.seatId,
+      }));
+      console.log("Saving to localStorage:", passengerDetails);
+      localStorage.setItem(
+        "localPassengerDetails",
+        JSON.stringify(passengerDetails)
+      );
+
       let exactOriginId = String(tripOriginId);
       let exactDestId = String(tripDestId);
 

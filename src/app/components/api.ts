@@ -1,6 +1,6 @@
 import { cityMapping } from "./cityMapping";
 
-export const BASE_URL = "";
+export const BASE_URL = "https://test.yesgobus.com";
 const CACHE_TTL_BUS_LIST = 3 * 60 * 1000; // 3 minutes
 const CACHE_TTL_SEAT_LAYOUT = 2 * 60 * 1000; // 2 minutes
 const CACHE_TTL_CITY = 10 * 60 * 1000; // 10 minutes

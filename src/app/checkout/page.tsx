@@ -660,25 +660,37 @@ function CheckoutContent() {
                       const actualPax = pax?.passenger || pax;
                       
                       const paxName = actualPax?.passengerName || actualPax?.name || actualPax?.paxName || ticketData?.customerName || "---";
-                      const seatNo = actualPax?.seatName || actualPax?.seatCode || actualPax?.seat_number || ticketData?.selectedSeats || ticketData?.seats || "---";
+                      const seatNo = actualPax?.seatName || actualPax?.seatCode || actualPax?.seat_number || actualPax?.seatId || ticketData?.selectedSeats || ticketData?.seats || "---";
 
-                      let localAge = "---";
-                      let localGender = "---";
+                      let localMatch: any = null;
+
                       if (typeof window !== "undefined") {
                         try {
                           const localPaxData = JSON.parse(localStorage.getItem('localPassengerDetails') || '[]');
-                          const match = localPaxData.find((lp: any) => lp.seatId === seatNo || lp.name === paxName);
-                          if (match) {
-                            localAge = match.age || "---";
-                            localGender = match.gender || "---";
-                          }
+                          localMatch = localPaxData.find(
+                            (lp: any) =>
+                              lp.seatId === seatNo ||
+                              lp.name === paxName
+                          ) || localPaxData[0];
                         } catch (e) {}
                       }
 
-                      let paxAge = actualPax?.passengerAge || actualPax?.age || actualPax?.paxAge || localAge;
-                      let paxGender = actualPax?.passengerGendar || actualPax?.passengerGender || actualPax?.gender || actualPax?.sex || localGender;
+                      const paxAge =
+                        actualPax?.passengerAge ||
+                        actualPax?.age ||
+                        actualPax?.paxAge ||
+                        localMatch?.age ||
+                        "";
+                      let paxGender =
+                        actualPax?.passengerGender ||
+                        actualPax?.passengerGendar ||
+                        actualPax?.gender ||
+                        actualPax?.sex ||
+                        localMatch?.gender ||
+                        "";
 
-                      if (paxGender.length === 1) {
+                      // Normalize gender to full word if it's a single character
+                      if (typeof paxGender === 'string' && paxGender.length === 1) {
                         if (paxGender.toLowerCase() === 'm') paxGender = 'Male';
                         if (paxGender.toLowerCase() === 'f') paxGender = 'Female';
                       }
@@ -701,12 +713,20 @@ function CheckoutContent() {
                       );
                     })
                   ) : (
-                    <tr>
-                      <td style={{ borderRight: `1px solid ${borderGray}`, borderBottom: 'none', padding: '10px 5px' }}>{ticketData?.customerName || "---"}</td>
-                      <td style={{ borderRight: `1px solid ${borderGray}`, borderBottom: 'none', padding: '10px 5px' }}>---</td>
-                      <td style={{ borderRight: `1px solid ${borderGray}`, borderBottom: 'none', padding: '10px 5px' }}>---</td>
-                      <td style={{ borderBottom: 'none', padding: '10px 5px' }}>{ticketData?.selectedSeats || "---"}</td>
-                    </tr>
+                    (() => {
+                      const localPax = JSON.parse(
+                        (typeof window !== "undefined" && localStorage.getItem("localPassengerDetails")) || "[]"
+                      );
+                      const p = localPax[0] || {};
+                      return (
+                        <tr>
+                          <td style={{ borderRight: `1px solid ${borderGray}`, borderBottom: 'none', padding: '10px 5px' }}>{p.name || ticketData?.customerName}</td>
+                          <td style={{ borderRight: `1px solid ${borderGray}`, borderBottom: 'none', padding: '10px 5px', textTransform: 'capitalize' }}>{p.gender}</td>
+                          <td style={{ borderRight: `1px solid ${borderGray}`, borderBottom: 'none', padding: '10px 5px' }}>{p.age}</td>
+                          <td style={{ borderBottom: 'none', padding: '10px 5px' }}>{p.seatId || ticketData?.selectedSeats}</td>
+                        </tr>
+                      );
+                    })()
                   )}
                 </tbody>
               </table>

@@ -10,12 +10,12 @@ const nextConfig = {
     // 2. Send everything else to the test API (test.yesgobus.com)
     {
       source: "/api/:path*",
-      destination: "https://apis.yesgobus.com/api/:path*",
+      destination: "https://test.yesgobus.com/api/:path*",
     },
     // 3. Ezee routes
        {
          source: "/ezee/:path*",
-         destination: "https://apis.yesgobus.com/:path*",
+         destination: "https://test.yesgobus.com/:path*",
        }
   ];
  }
