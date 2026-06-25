@@ -171,6 +171,10 @@ export interface CitySuggestion {
   vrlCityId?: string;
   srsCityId?: string;
   ezeeStationCode?: string;
+
+  // Properties for "Recent Search" functionality
+  isRecent?: boolean;
+  destination?: CitySuggestion;
 }
 
 export const fetchCitySuggestions = async (
