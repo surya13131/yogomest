@@ -139,24 +139,10 @@ export default function Home() {
       setCurrentLang(savedLang);
     }
 
-    // Load any previously selected date on mount (optional)
-    const savedDate = localStorage.getItem('yesgo_selected_date');
+    // ✅ Reset date to today on every page load.
     const todayLocal = getTodayLocal();
-    
-    const tomorrow = new Date();
-    tomorrow.setMinutes(tomorrow.getMinutes() - tomorrow.getTimezoneOffset());
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowString = tomorrow.toISOString().split('T')[0];
-
-    if (savedDate && savedDate >= todayLocal) {
-      setSelectedDate(savedDate);
-      if (savedDate === todayLocal) setActiveDateTab('today');
-      else if (savedDate === tomorrowString) setActiveDateTab('tomorrow');
-    } else {
-      setSelectedDate(todayLocal);
-      setActiveDateTab('today');
-      localStorage.setItem('yesgo_selected_date', todayLocal);
-    }
+    setSelectedDate(todayLocal);
+    setActiveDateTab('today');
 
     // 2. Event Listener for updates from Navbar
     const handleLanguageUpdate = () => {
@@ -209,8 +195,28 @@ export default function Home() {
     } else {
       setActiveDateTab(null);
     }
+  };
 
-    localStorage.setItem('yesgo_selected_date', finalDate); // Save to local storage
+  const handleSourceFocus = () => {
+    // ✅ On focus, check if the input is empty and load recent searches.
+    if (sourceText.length === 0) {
+      const recent = localStorage.getItem("recentSearch");
+      if (recent) {
+        try {
+          const data = JSON.parse(recent);
+          if (data.source && data.destination) {
+            const recentSuggestion = { ...data.source, isRecent: true, destination: data.destination };
+            setSourceSuggestions([recentSuggestion]);
+          }
+        } catch (e) {
+          setSourceSuggestions([]);
+          console.error("Failed to parse recent search from localStorage", e);
+        }
+      } else {
+        setSourceSuggestions([]); // Ensure dropdown is empty if no recent search
+      }
+    }
+    setShowSourceDropdown(true);
   };
 
   const handleSourceChange = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -222,6 +228,8 @@ export default function Home() {
       const results = await fetchCitySuggestions(val);
       setSourceSuggestions(results);
       setShowSourceDropdown(true);
+    } else if (val.length === 0) { // When user clears the input
+      handleSourceFocus(); // Re-show recent searches
     } else {
       setSourceSuggestions([]);
       setShowSourceDropdown(false);
@@ -237,7 +245,7 @@ export default function Home() {
       const results = await fetchCitySuggestions(val);
       setDestSuggestions(results);
       setShowDestDropdown(true);
-    } else {
+    }  else {
       setDestSuggestions([]);
       setShowDestDropdown(false);
     }
@@ -268,8 +276,14 @@ export default function Home() {
       return;
     }
 
-    // Store final verified date in local storage before pushing to next page
-    localStorage.setItem('yesgo_selected_date', selectedDate);
+    // 2. Save recent source and destination to Local Storage on successful search.
+    localStorage.setItem(
+      "recentSearch",
+      JSON.stringify({
+        source: selectedSource,
+        destination: selectedDest,
+      })
+    );
 
     // ✅ FIX 3: Accurately split at the parenthesis and grab the string at index, then trim.
     const cleanName = (name: string) => (name || "").split("(")[0].trim();
@@ -550,28 +564,51 @@ export default function Home() {
                     className="search-field search-field-left" 
                     placeholder={t.selectLocation} 
                     value={sourceText}
-                    onChange={handleSourceChange}
-                    onFocus={() => setShowSourceDropdown(true)}
+                    onChange={handleSourceChange}                    onFocus={handleSourceFocus}
                     onBlur={() => setTimeout(() => setShowSourceDropdown(false), 200)}
                   />
                 </div>
-                {showSourceDropdown && sourceSuggestions.length > 0 && (
-                  <ul className="list-group position-absolute w-100 shadow text-start" style={{ zIndex: 1050, top: 'calc(100% + 5px)', left: 0, maxHeight: '250px', overflowY: 'auto' }}>
-                    {sourceSuggestions.map((city) => (
-                      <li 
-                        key={city._id} 
-                        className="list-group-item list-group-item-action py-2" 
-                        style={{ cursor: 'pointer', fontSize: '14px' }} 
-                        onMouseDown={() => {
-                          setSourceText(city.name);
-                          setSelectedSource(city);
-                          setShowSourceDropdown(false);
-                        }}
-                      >
-                        <i className="bi bi-geo-alt me-2 text-muted"></i>
-                        <span className="fw-medium text-dark">{city.name}</span>
-                      </li>
-                    ))}
+                {showSourceDropdown && (
+                  <ul className="list-group position-absolute w-100 shadow text-start" style={{ zIndex: 1050, top: 'calc(100% + 5px)', left: 0, maxHeight: '250px', overflowY: 'auto' }}>                    
+                    {sourceSuggestions.length > 0 ? ( // Check if there are any suggestions
+                      <>
+                        {/* Show "Recent Searches" header only when typing hasn't started and there's a recent item */}
+                        {sourceText.length === 0 && sourceSuggestions.some(s => s.isRecent) && (
+                          <li className="list-group-item disabled text-muted small">Recent Searches</li>
+                        )}
+                        {sourceSuggestions.map((item: any) => (
+                          <li 
+                            key={item._id || item.id} 
+                            className="list-group-item list-group-item-action py-2" 
+                            style={{ cursor: 'pointer', fontSize: '14px' }} 
+                            onMouseDown={() => {
+                              if (item.isRecent) {
+                                // ✅ If it's a recent search, auto-fill both source and destination.
+                                setSourceText(item.name);
+                                setSelectedSource(item);
+                                setDestText(item.destination.name);
+                                setSelectedDest(item.destination);
+                              } else {
+                                // Otherwise, it's a regular API suggestion.
+                                setSourceText(item.name);
+                                setSelectedSource(item);
+                              }
+                              setShowSourceDropdown(false); // Close dropdown on selection.
+                            }}
+                          >
+                            {/* Use a different icon for recent vs. API results */}
+                            <i className={`bi ${item.isRecent ? 'bi-arrow-repeat' : 'bi-geo-alt'} me-2 text-muted`}></i>
+                            <span className="fw-medium text-dark">{item.name}</span>
+                          </li>
+                        ))}
+                      </>
+                    ) : ( // This part runs if sourceSuggestions is empty
+                      sourceText.length > 1 && (
+                        <li className="list-group-item text-muted">
+                          No cities found.
+                        </li>
+                      )
+                    )}
                   </ul>
                 )}
               </div>
@@ -595,23 +632,30 @@ export default function Home() {
                     onBlur={() => setTimeout(() => setShowDestDropdown(false), 200)} 
                   />
                 </div>
-                {showDestDropdown && destSuggestions.length > 0 && (
-                  <ul className="list-group position-absolute w-100 shadow text-start" style={{ zIndex: 1050, top: 'calc(100% + 5px)', left: 0, maxHeight: '250px', overflowY: 'auto' }}>
-                    {destSuggestions.map((city) => (
-                      <li 
-                        key={city._id} 
-                        className="list-group-item list-group-item-action py-2" 
-                        style={{ cursor: 'pointer', fontSize: '14px' }} 
-                        onMouseDown={() => {
-                          setDestText(city.name);
-                          setSelectedDest(city);
-                          setShowDestDropdown(false);
-                        }}
-                      >
-                        <i className="bi bi-geo-alt me-2 text-muted"></i>
-                        <span className="fw-medium text-dark">{city.name}</span>
-                      </li>
-                    ))}
+                {showDestDropdown && (
+                  <ul className="list-group position-absolute w-100 shadow text-start" style={{ zIndex: 1050, top: 'calc(100% + 5px)', left: 0, maxHeight: '250px', overflowY: 'auto' }}>                    
+                    {destSuggestions.length > 0 ? (
+                      destSuggestions.map((city) => (
+                        <li 
+                          key={city._id || city.id} 
+                          className="list-group-item list-group-item-action py-2" 
+                          style={{ cursor: 'pointer', fontSize: '14px' }} 
+                          onMouseDown={() => {                            
+                            setDestText(city.name);
+                            setSelectedDest(city);
+                            setShowDestDropdown(false);
+                          }} >
+                          <i className="bi bi-geo-alt me-2 text-muted"></i>
+                          <span className="fw-medium text-dark">{city.name}</span>
+                        </li>
+                      ))
+                    ) : (
+                      destText.length > 1 && ( 
+                        <li className="list-group-item text-muted">
+                          No cities found.
+                        </li>
+                      )
+                    )}
                   </ul>
                 )}
               </div>
@@ -660,26 +704,20 @@ export default function Home() {
 
                   <div className="date-btn-wrapper flex-fill h-100">
                     <button className={`date-btn w-100 h-100 border-0 ${activeDateTab === 'today' ? 'active-orange' : 'bg-transparent'}`} onClick={() => {
-                      // ✅ STORE IN LOCAL STORAGE
-                      const todayString = getTodayLocal();
-                      setSelectedDate(todayString);
+                      setSelectedDate(getTodayLocal());                      
                       setActiveDateTab('today');
-                      localStorage.setItem('yesgo_selected_date', todayString);
-                    }}>{t.today}</button>
-                  </div>
+                    }}>{t.today}</button>                  </div>
 
                   <div className="full-height-divider"></div>
 
                   <div className="date-btn-wrapper flex-fill h-100">
                     <button className={`date-btn w-100 h-100 border-0 ${activeDateTab === 'tomorrow' ? 'active-orange' : 'bg-transparent'}`} onClick={() => {
-                      // ✅ STORE IN LOCAL STORAGE
                       const tomorrow = new Date();
                       tomorrow.setMinutes(tomorrow.getMinutes() - tomorrow.getTimezoneOffset());
                       tomorrow.setDate(tomorrow.getDate() + 1);
                       const tomorrowString = tomorrow.toISOString().split('T')[0];
                       setSelectedDate(tomorrowString);
                       setActiveDateTab('tomorrow');
-                      localStorage.setItem('yesgo_selected_date', tomorrowString);
                     }}>{t.tomorrow}</button>
                   </div>
                 </div>

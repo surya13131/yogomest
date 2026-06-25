@@ -18,13 +18,32 @@ const PopularRoutesAndContact: React.FC = () => {
   // Helper function to handle navigation
   const handleBooking = (source: string, dest: string) => {
     const today = new Date().toISOString().split('T')[0];
-    
+
+    // Special case for Bangalore → Mysore
+    if (source === "Bangalore" && dest === "Mysore") {
+      const queryParams = new URLSearchParams({
+        sourceName: "Bangalore",
+        destName: "Mysore",
+        vrlSourceId: "757",
+        vrlDestId: "3509",
+        srsSourceId: "134",
+        srsDestId: "981",
+        ezeeSourceCode: "STF3OEX206",
+        ezeeDestCode: "",
+        date: today,
+      });
+
+      router.push(`/bus-list?${queryParams.toString()}`);
+      return;
+    }
+
+    // Existing logic for all other routes
     const queryParams = new URLSearchParams({
       sourceName: source,
       destName: dest,
       date: today
     });
-
+    
     router.push(`/bus-list?${queryParams.toString()}`);
   };
 
