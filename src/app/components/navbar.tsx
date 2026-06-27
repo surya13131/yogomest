@@ -354,7 +354,7 @@ const handleAuthAction = async (e: React.FormEvent) => {
                         console.log(credentialResponse.credential);
 
                         const response = await fetch(
-                          "https://test.yesgobus.com/api/user/googleSignIn",
+                          "https://apis.yesgobus.com/api/user/googleSignIn",
                           {
                             method: "POST",
                             headers: {
@@ -407,7 +407,7 @@ const handleAuthAction = async (e: React.FormEvent) => {
                         console.log(credentialResponse.credential);
 
                         const response = await fetch(
-                          "https://test.yesgobus.com/api/user/googleSignIn",
+                          "https://apis.yesgobus.com/api/user/googleSignIn",
                           {
                             method: "POST",
                             headers: {
