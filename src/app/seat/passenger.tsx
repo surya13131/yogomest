@@ -134,7 +134,7 @@ export default function Step3PassengerInfo({
   const droppingPointTime = selectedDp?.time || selectedDp?.Time || selectedDp?.dpTime || "N/A";
 
   return (
-    <div className="row g-4 w-100 mx-0 justify-content-center">
+    <div className="row g-4 w-100 mx-0 justify-content-center passenger-info-page">
       <div className="col-12 col-lg-6">
       <style>{`
         .form-control::placeholder {
@@ -145,28 +145,28 @@ export default function Step3PassengerInfo({
         <div style={figmaBoxStyle} className="mb-4">
           <h5 style={figmaLabelStyle}>Contact Details</h5>
           <p style={{...figmaTextStyle, fontSize: '13px', lineHeight: '20px'}} className="mb-4">Your ticket confirmation will be sent to the details below.</p>
-          <div className="row g-3">
-            <div className="col-12 col-md-6">
-              <div className="input-group">
-                <span className="input-group-text fw-medium" style={{ backgroundColor: "transparent", border: "1px solid #777777", borderRight: "none", borderTopLeftRadius: "8px", borderBottomLeftRadius: "8px", color: "#333", fontSize: "14px" }}>+91 (IND)</span>
+          <div className="contact-details">
+            <div className="contact-row">
+              <div className="phone-input form-group">
+                <span className="country-code">+91 (IND)</span>
                 {/* ✅ FIX: Force value to strip double +91 visually and on typing */}
                 <input 
                   type="tel" 
                   className="form-control shadow-none" 
                   placeholder="Phone Number *" 
+                  maxLength={10}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={contactPhone?.replace(/^(\+91\s*|91\s*)/, '') || ''} 
                   onChange={(e) => {
-                    const cleanedPhone = e.target.value.replace(/^(\+91\s*|91\s*)/, '');
-                    setContactPhone(cleanedPhone);
+                    const value = e.target.value.replace(/\D/g, "");
+                    setContactPhone(value.slice(0, 10));
                   }} 
-                  style={{ backgroundColor: "transparent", border: "1px solid #777777", borderLeft: "none", borderTopRightRadius: "8px", borderBottomRightRadius: "8px", fontSize: "14px", color: "#333", paddingLeft: "0" }} 
                 />
               </div>
-            </div>
-            <div className="col-12 col-md-6">
               <input type="email" className="form-control shadow-none" placeholder="Email Address" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} style={figmaInputStyle} />
             </div>
-            <div className="col-12">
+            <div className="form-group">
               <select className="form-select shadow-none" value={contactState} onChange={(e) => setContactState(e.target.value)} style={{...figmaInputStyle, color: contactState ? "#333" : "#676767"}}>
                 <option value="">State of Residence *</option>
                 <option value="Karnataka">Karnataka</option>
@@ -175,7 +175,7 @@ export default function Step3PassengerInfo({
                 <option value="Delhi">Delhi</option>
               </select>
             </div>
-            <div className="col-12 mt-2">
+            <div className="mt-2">
               <span style={{ fontSize: "13px", fontWeight: 400, color: "#676767" }}>Required only if you need a GST invoice.</span>
             </div>
           </div>
@@ -192,11 +192,11 @@ export default function Step3PassengerInfo({
               : [];
 
             return (
-              <div key={pax.seatId} className={index !== passengers.length - 1 ? "mb-4 pb-4 border-bottom" : ""}>
+              <div key={pax.seatId} className={`passenger-details ${index !== passengers.length - 1 ? "mb-4 pb-4 border-bottom" : ""}`}>
                 <p className="mb-3" style={{ fontSize: '14px', fontWeight: 500, color: '#6B7280' }}>Seat {pax.seatId}</p>
                 
-                <div className="row g-3 mb-3">
-                  <div className="col-12 position-relative">
+                <div className="passenger-row form-group">
+                  <div className="position-relative">
                     <input 
                       type="text" 
                       className="form-control shadow-none w-100" 
@@ -230,18 +230,31 @@ export default function Step3PassengerInfo({
                       </div>
                     )}
                   </div>
-                  <div className="col-12">
-                    <input type="number" className="form-control shadow-none w-100" placeholder="Age *" value={pax.age} onChange={(e) => handlePaxChange(index, 'age', e.target.value)} style={figmaInputStyle} />
-                  </div>
+                  <input 
+                    type="number" 
+                    className="form-control shadow-none w-100" 
+                    placeholder="Age *" 
+                    value={pax.age} 
+                    min={1}
+                    max={120}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === "") {
+                        handlePaxChange(index, 'age', "");
+                      } else {
+                        handlePaxChange(index, 'age', value);
+                      }
+                    }} style={figmaInputStyle} />
                 </div>
-                <div className="d-flex flex-column gap-2 mt-2">
+
+                <div className="form-group">
                   <span style={{ fontSize: "15px", fontWeight: 500, lineHeight: "22px", color: "#676767" }}>Gender *</span>
-                  <div className="d-flex gap-3 w-100">
-                    <label className="btn py-2 text-center" style={{ flex: 1, border: pax.gender === 'Male' ? '1px solid #333' : '1px solid #777777', backgroundColor: "transparent", color: pax.gender === 'Male' ? '#000' : '#676767', borderRadius: "8px", fontSize: "15px", fontWeight: 500, letterSpacing: "0.2px", cursor: "pointer" }}>
+                  <div className="gender-group">
+                    <label className="gender-option" style={{ borderColor: pax.gender === 'Male' ? '#333' : '#D1D5DB', color: pax.gender === 'Male' ? '#000' : '#676767' }}>
                       <input type="radio" className="d-none" name={`gender-${index}`} value="Male" onChange={() => handlePaxChange(index, 'gender', 'Male')} /> 
                       Male
                     </label>
-                    <label className="btn py-2 text-center" style={{ flex: 1, border: pax.gender === 'Female' ? '1px solid #333' : '1px solid #777777', backgroundColor: "transparent", color: pax.gender === 'Female' ? '#000' : '#676767', borderRadius: "8px", fontSize: "15px", fontWeight: 500, letterSpacing: "0.2px", cursor: "pointer" }}>
+                    <label className="gender-option" style={{ borderColor: pax.gender === 'Female' ? '#333' : '#D1D5DB', color: pax.gender === 'Female' ? '#000' : '#676767' }}>
                       <input type="radio" className="d-none" name={`gender-${index}`} value="Female" onChange={() => handlePaxChange(index, 'gender', 'Female')} /> 
                       Female
                     </label>
@@ -257,14 +270,14 @@ export default function Step3PassengerInfo({
             <i className="bi bi-tag fs-5" style={{color: "#111827"}}></i>
             <h5 style={figmaLabelStyle} className="text-dark mb-0">Offers & Coupons</h5>
           </div>
-          <div className="row g-3 mt-2">
-            <div className="col-12 d-flex gap-2 align-items-center">
+          <div className="mt-3">
+            <div className="offer-row mb-3">
               <input type="text" className="form-control shadow-none" placeholder="Enter Membership Code" style={figmaInputStyle} />
-              <button type="button" style={{ background: "#1DA1F2", border: "none", color: "#fff", padding: "10px 20px", borderRadius: "20px", fontSize: "14px", fontWeight: "500" }}>Verify</button>
+              <button type="button">Verify</button>
             </div>
-            <div className="col-12 d-flex gap-2 align-items-center">
+            <div className="offer-row">
               <input type="text" className="form-control shadow-none" placeholder="Enter Offer Code" style={figmaInputStyle} />
-              <button type="button" style={{ background: "#1DA1F2", border: "none", color: "#fff", padding: "10px 20px", borderRadius: "20px", fontSize: "14px", fontWeight: "500" }}>Verify</button>
+              <button type="button">Verify</button>
             </div>
           </div>
         </div>
@@ -317,8 +330,8 @@ export default function Step3PassengerInfo({
       </div>
 
       <div className="col-12 col-lg-6">
-        <div className="sticky-top" style={{ ...figmaBoxStyle, top: "100px", padding: "40px 30px" }}>
-          <div className="mb-5">
+        <div className="sticky-top" style={{ ...figmaBoxStyle, top: "100px", padding: "24px 24px" }}>
+          <div className="mb-3">
             <h5 style={{...figmaLabelStyle, fontSize: '18px', fontWeight: 600}}>{operatorName}</h5>
             <p style={{...figmaTextStyle, fontSize: '14px', fontWeight: 400}} className="mb-0">{selectedSeats.length} Seat • {busType}</p>
           </div>
@@ -341,7 +354,7 @@ export default function Step3PassengerInfo({
                   <div style={{ fontSize: '13px', color: '#6B7280' }}>Pickup Van/Bus</div>
                 </div>
               </div>
-              <div className="text-muted my-3" style={{ fontSize: '13px' }}>{journeyDuration}</div>
+              <div className="text-muted my-2" style={{ fontSize: '13px' }}>{journeyDuration}</div>
               <div className="d-flex justify-content-between">
                 <div>
                   <div style={{ fontSize: '26px', fontWeight: 700, color: '#111827' }}>{droppingPointTime}</div>
@@ -354,19 +367,19 @@ export default function Step3PassengerInfo({
             </div>
           </div>
 
-          <hr style={{ borderColor: "#777777", opacity: 0.4, margin: "30px 0" }} />
+          <hr style={{ borderColor: "#777777", opacity: 0.4, margin: "16px 0" }} />
 
           {/* Seat & Passenger Details */}
-          <div className="d-flex justify-content-between align-items-center mb-3">
+          <div className="d-flex justify-content-between align-items-center mb-2">
             <span style={{...figmaTextStyle, fontWeight: 500, color: '#676767', fontSize: '14px'}}>Seat Details</span>
             <span className="text-end" style={{...figmaTextStyle, fontWeight: 600, color: '#333', fontSize: '14px'}}>{selectedSeats.map(s => `${s.id} • ${s.isUpper ? 'Upper' : 'Lower'} Deck`).join(', ')}</span>
           </div>
-          <div className="d-flex justify-content-between align-items-center mb-4">
+          <div className="d-flex justify-content-between align-items-center">
             <span style={{...figmaTextStyle, fontWeight: 500, color: '#676767', fontSize: '14px'}}>Passenger</span>
             <span className="text-end" style={{...figmaTextStyle, fontWeight: 600, color: '#333', fontSize: '14px'}}>{selectedSeats.length} Passenger{selectedSeats.length > 1 ? 's' : ''}</span>
           </div>
 
-          <hr style={{ borderColor: "#777777", opacity: 0.4, margin: "30px 0" }} />
+          <hr style={{ borderColor: "#777777", opacity: 0.4, margin: "16px 0" }} />
           <div className="d-flex justify-content-between align-items-center">
             <h6 style={{...figmaLabelStyle, fontSize: '16px', fontWeight: 600, marginBottom: 0}}>Fare</h6>
             <p style={{...figmaTextStyle, fontSize: '20px', fontWeight: 700, color: '#333'}} className="mb-0">₹{finalAmount.toFixed(2)}</p>

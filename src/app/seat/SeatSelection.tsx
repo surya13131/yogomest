@@ -680,6 +680,14 @@ const normalizeColumns = (deckSeats: NormalizedSeat[]) => {
       const result = colNormalized
         .filter((s: any) => Number(s.BlockType) !== 3)
         .map(seat => {
+          const isTargetVRLBus =
+            provider === "VRL" &&
+            operatorName === "VRL Travels" &&
+            busType?.includes("Gold Class");
+
+          if (isTargetVRLBus && String(seat.id).toUpperCase() === "L23") {
+            seat.col = 3; // Force L23 to column 3 during initial mapping
+          }
           const isMixedVrl =
             busType?.toLowerCase().includes("sleeper") &&
             busType?.toLowerCase().includes("seater");
@@ -698,6 +706,18 @@ const normalizeColumns = (deckSeats: NormalizedSeat[]) => {
             isLastRow: false,
           };
         });
+
+      const l23 = result.find(
+        s =>
+          provider === "VRL" &&
+          operatorName === "VRL Travels" &&
+          busType?.includes("Gold Class") &&
+          String(s.id).toUpperCase() === "L23"
+      );
+
+      if (l23) {
+        l23.col = 3; // Force final position
+      }
 
       return result;
     }

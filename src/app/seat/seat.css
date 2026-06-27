@@ -1,16 +1,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
 
+.page-container {
+  width: min(90%, 1600px);
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
 * {
   box-sizing: border-box;
 }
 
-body {
+.seat-page-wrapper {
   margin: 0;
   padding: 0;
   background: #F3F3F3;
   font-family: 'Poppins', sans-serif;
   overflow-x: hidden; 
-  width: 100%;
+  width: 100%; /* This was on body, moved to wrapper */
 }
 
 .seat-page-wrapper {
@@ -235,6 +241,7 @@ body {
   position: sticky;
   top: 100px; 
   height: fit-content;
+  align-self: flex-start;
   width: 100%;
 }
 
@@ -244,6 +251,9 @@ body {
   padding: 28px;
   border: 1px solid #E5E7EB;
   box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+  height: auto;
+  max-height: none;
+  overflow: visible;
 }
 
 .sidebar-tabs {
@@ -391,6 +401,14 @@ body {
   .right-sidebar-container {
     position: sticky;
     top: 120px;
+    margin-bottom: 110px;
+    max-height: calc(100vh - 220px);
+    overflow-y: auto;
+    padding-bottom: 20px; /* Some padding at the bottom when scrolling */
+    margin-bottom: 110px; /* Leave space for fixed footer */
+    max-height: none;
+    overflow-y: visible;
+    padding-bottom: 0;
     width: 100%;
     align-self: start;
   }
@@ -480,4 +498,316 @@ body {
   .mobile-tabs {
     display: block;
   }
+}
+
+@media (max-width: 768px) {
+  .page-container {
+    width: 100%;
+    padding-right: 15px;
+    padding-left: 15px;
+  }
+}
+
+/* ========================================= */
+/* FORM STYLES (PASSENGER INFO, ETC.) */
+/* ========================================= */
+
+/* 1. Make all labels darker */
+.seat-page-wrapper .form-label,
+.seat-page-wrapper label,
+.seat-page-wrapper .passenger-details label,
+.seat-page-wrapper .contact-details label {
+    color: #111827 !important;
+    font-weight: 600;
+    font-size: 15px;
+}
+
+/* 2. Make input fields taller and better looking */
+.seat-page-wrapper input,
+.seat-page-wrapper select,
+.seat-page-wrapper textarea,
+.seat-page-wrapper .form-control {
+    height: 52px;
+    border: 1.5px solid #CFCFCF;
+    border-radius: 10px;
+    padding: 0 16px;
+    font-size: 16px;
+    color: #111827;
+    background: #fff;
+}
+
+.seat-page-wrapper input::placeholder,
+.seat-page-wrapper textarea::placeholder {
+    color: #9CA3AF;
+}
+
+/* 3. Better focus effect */
+.seat-page-wrapper input:focus,
+.seat-page-wrapper select:focus,
+.seat-page-wrapper textarea:focus {
+    border-color: #2563EB;
+    box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+    outline: none;
+}
+
+/* 4. Make Name & Age fields larger */
+.seat-page-wrapper .passenger-details .form-control {
+    width: 100%;
+    min-height: 52px; /* This is now default */
+}
+
+/* This might be too broad, but scoping it as requested */
+.seat-page-wrapper .passenger-details .row {
+    margin-bottom: 20px; /* Replaced by form-group */
+}
+
+/* 5. Improve Male/Female radio buttons */
+.gender-group {
+    display: flex;
+    gap: 20px;
+    margin-top: 10px;
+}
+
+.seat-page-wrapper .gender-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #111827;
+    cursor: pointer;
+}
+
+.seat-page-wrapper .gender-group input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #0F4C81;
+}
+
+/* 6. Make headings darker */
+.seat-page-wrapper h3,
+.seat-page-wrapper h4,
+.seat-page-wrapper h5,
+.seat-page-wrapper .card-title {
+    color: #111827;
+    font-weight: 700;
+}
+
+.seat-page-wrapper .contact-details p,
+.seat-page-wrapper .passenger-details p {
+    color: #4B5563;
+}
+
+/* 7. Increase spacing between fields */
+.seat-page-wrapper .form-group {
+    margin-bottom: 18px;
+}
+
+.seat-page-wrapper .row {
+    row-gap: 18px;
+}
+
+/* 8 & 9. Make dropdown match inputs and darken text */
+.seat-page-wrapper select,
+.seat-page-wrapper input,
+.seat-page-wrapper textarea {
+    color: #111827 !important;
+    font-weight: 500;
+}
+
+.seat-page-wrapper select {
+    height: 52px;
+    font-size: 16px;
+}
+
+/* USER PROVIDED FIXES & REFINEMENTS */
+.contact-details .form-control,
+.passenger-details .form-control,
+input.form-control,
+select {
+    width: 100% !important;
+    min-width: 0;
+    height: 52px;
+    font-size: 15px;
+    padding: 0 16px;
+}
+
+.seat-page-wrapper .row > [class*="col-"]{
+    display:flex;
+    flex-direction:column;
+}
+
+.seat-page-wrapper .passenger-row{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+@media(max-width:768px){
+    .passenger-row{
+        grid-template-columns:1fr;
+    }
+}
+
+.seat-page-wrapper .gender-group{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+    margin-top:12px;
+}
+
+.gender-option{
+    height:52px;
+    border:1px solid #D1D5DB;
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    font-size:15px;
+    font-weight:500;
+}
+
+.seat-page-wrapper .contact-row{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+@media(max-width:768px){
+    .contact-row{
+        grid-template-columns:1fr;
+    }
+}
+
+.passenger-details{
+    padding: 28px 0 0 0;
+    border-bottom: 1px solid #dee2e6;
+    max-width: 760px;
+}
+.passenger-details:last-child {
+    border-bottom: none;
+}
+
+.contact-details {
+    max-width: 760px;
+}
+
+.contact-details .form-control,
+.passenger-details .form-control {
+    width: 100%;
+}
+
+.phone-input {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: 0;
+}
+
+.country-code {
+    width: 110px;
+    min-width: 110px;
+    border-radius: 10px 0 0 10px;
+    border-right: none;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid #CFCFCF;
+    background: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+}
+
+.phone-input input {
+    flex: 1;
+    border-radius: 0 10px 10px 0;
+}
+
+.offer-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.offer-row input {
+    flex: 1;
+}
+.offer-row button {
+    width: 100px;
+    height: 52px;
+    flex-shrink: 0;
+    background: #1DA1F2;
+    border: none;
+    color: #fff;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* Passenger Info Page Specific Styles */
+
+/* 1. Reduce height of Bus Details card */
+.passenger-info-page .seat-sidebar {
+    padding: 20px;
+    border-radius: 14px;
+    color: #111827;
+}
+
+.passenger-info-page .seat-sidebar hr {
+    margin: 12px 0;
+}
+
+.passenger-info-page .seat-sidebar .accordion-row,
+.passenger-info-page .seat-sidebar .summary-row {
+    padding: 10px 0;
+}
+
+.passenger-info-page .seat-sidebar h3,
+.passenger-info-page .seat-sidebar h4 {
+    margin: 0 0 6px;
+}
+
+.passenger-info-page .seat-sidebar p {
+    margin: 2px 0;
+    line-height: 1.35;
+}
+
+/* 2. Make summary card text darker */
+.passenger-info-page .seat-sidebar h3,
+.passenger-info-page .seat-sidebar h4,
+.passenger-info-page .seat-sidebar h5 {
+    color: #111827;
+    font-weight: 700;
+}
+
+.passenger-info-page .seat-sidebar p,
+.passenger-info-page .seat-sidebar span,
+.passenger-info-page .seat-sidebar small {
+    color: #374151;
+    font-weight: 500;
+}
+
+/* 3. Make Passenger Info form fonts darker */
+.passenger-info-page input,
+.passenger-info-page select,
+.passenger-info-page textarea {
+    color: #111827 !important;
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.passenger-info-page input::placeholder,
+.passenger-info-page textarea::placeholder {
+    color: #6B7280;
+    opacity: 1;
+    font-weight: 500;
+}
+
+.passenger-info-page label,
+.passenger-info-page .form-label {
+    color: #111827;
+    font-weight: 600;
 }

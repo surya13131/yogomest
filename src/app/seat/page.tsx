@@ -285,9 +285,24 @@ function SeatLayoutContent() {
       setCurrentStep(3);
       window.scrollTo(0, 0);
     } else if (currentStep === 3) {
-      if (!contactEmail || !contactPhone || !contactState) { alert("Please fill all contact details."); return; }
-      const invalidPax = passengers.some(p => !p.name || !p.age || !p.gender);
-      if (invalidPax) { alert("Please fill all passenger details completely."); return; }
+      // Enhanced Validation
+      if (!contactState) { alert("Please select your State of Residence."); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) { alert("Please enter a valid email address."); return; }
+      if (!/^[6-9]\d{9}$/.test(contactPhone)) { alert("Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9."); return; }
+
+      for (const pax of passengers) {
+        if (!pax.name || pax.name.trim().length < 3) {
+          alert(`Please enter a valid name (at least 3 characters) for the passenger in seat ${pax.seatId}.`);
+          return;
+        }
+        const ageNum = Number(pax.age);
+        if (!pax.age || isNaN(ageNum) || ageNum < 1 || ageNum > 120) {
+          alert(`Please enter a valid age (1-120) for the passenger in seat ${pax.seatId}.`);
+          return;
+        }
+        if (!pax.gender) { alert(`Please select a gender for the passenger in seat ${pax.seatId}.`); return; }
+      }
+
       if (insurance === null) { alert("Please select an insurance option to proceed."); return; }
       if (hasGst && (!gstDetails.name || !gstDetails.gstId || !gstDetails.address)) { alert("Please fill all GST details."); return; }
 
@@ -361,44 +376,46 @@ function SeatLayoutContent() {
         <span style={{ paddingBottom: '8px', borderBottom: currentStep === 3 ? '3px solid #e11d48' : 'none', color: currentStep === 3 ? '#e11d48' : '#6b7280', fontWeight: currentStep === 3 ? '700' : '500' }}>3. Passenger Info</span>
       </div>
 
-      <div className="container-fluid px-3 px-xl-5 mt-4 mb-5 pb-5">
-        
-        {currentStep === 1 && (
-          <Step1SeatSelection
-            isLoading={isLoading} seats={seats} lowerDeckSeats={lowerDeckSeats} upperDeckSeats={upperDeckSeats} absoluteMaxRow={absoluteMaxRow}
-            totalCols={totalCols}
-            selectedSeats={selectedSeats} handleSeatClick={handleSeatClick} operatorName={operatorName} 
-            departureTime={departureTime}
-            arrivalTime={arrivalTime} 
-            rating={rating} 
-            journeyDateShort={journeyDateShort} 
-            busType={busTypeUrl || apiBusType}
-            lastSeats={lastSeats}
-            provider={provider || ""}
-            activeTab={activeTab} setActiveTab={setActiveTab}
-            boardingPoints={boardingPoints} droppingPoints={droppingPoints} sourceCity={sourceCity} destinationCity={destinationCity}
-            firstBpName={firstBpName} lastDpName={lastDpName} expandedAccordion={expandedAccordion} toggleAccordion={toggleAccordion}
-          />
-        )}
+      <div className="page-container">
+        <div className="container-fluid px-3 px-xl-5 mt-4 mb-5 pb-5">
+          
+          {currentStep === 1 && (
+            <Step1SeatSelection
+              isLoading={isLoading} seats={seats} lowerDeckSeats={lowerDeckSeats} upperDeckSeats={upperDeckSeats} absoluteMaxRow={absoluteMaxRow}
+              totalCols={totalCols}
+              selectedSeats={selectedSeats} handleSeatClick={handleSeatClick} operatorName={operatorName} 
+              departureTime={departureTime}
+              arrivalTime={arrivalTime} 
+              rating={rating} 
+              journeyDateShort={journeyDateShort} 
+              busType={busTypeUrl || apiBusType}
+              lastSeats={lastSeats}
+              provider={provider || ""}
+              activeTab={activeTab} setActiveTab={setActiveTab}
+              boardingPoints={boardingPoints} droppingPoints={droppingPoints} sourceCity={sourceCity} destinationCity={destinationCity}
+              firstBpName={firstBpName} lastDpName={lastDpName} expandedAccordion={expandedAccordion} toggleAccordion={toggleAccordion}
+            />
+          )}
 
-        {currentStep === 2 && (
-          <Step2PointSelection
-            boardingPoints={boardingPoints} droppingPoints={droppingPoints} selectedBp={selectedBp} setSelectedBp={setSelectedBp} selectedDp={selectedDp} setSelectedDp={setSelectedDp} 
-            departureTime={departureTime} arrivalTime={arrivalTime}
-          />
-        )}
+          {currentStep === 2 && (
+            <Step2PointSelection
+              boardingPoints={boardingPoints} droppingPoints={droppingPoints} selectedBp={selectedBp} setSelectedBp={setSelectedBp} selectedDp={selectedDp} setSelectedDp={setSelectedDp} 
+              departureTime={departureTime} arrivalTime={arrivalTime}
+            />
+          )}
 
-        {currentStep === 3 && (
-          <Step3PassengerInfo
-            operatorName={operatorName} selectedBp={selectedBp} selectedDp={selectedDp} doj={doj} finalAmount={finalAmount}
-            contactPhone={contactPhone} setContactPhone={setContactPhone} contactEmail={contactEmail} setContactEmail={setContactEmail} contactState={contactState} setContactState={setContactState}
-            passengers={passengers} handlePaxChange={handlePaxChange} showSuggestions={showSuggestions} setShowSuggestions={setShowSuggestions} savedPassengers={savedPassengers}
-            insurance={insurance} setInsurance={setInsurance} hasGst={hasGst} setHasGst={setHasGst} gstDetails={gstDetails} setGstDetails={setGstDetails} selectedSeats={selectedSeats} 
-            busType={busTypeUrl || apiBusType}
-            departureTime={departureTime}
-            arrivalTime={arrivalTime}
-          />
-        )}
+          {currentStep === 3 && (
+            <Step3PassengerInfo
+              operatorName={operatorName} selectedBp={selectedBp} selectedDp={selectedDp} doj={doj} finalAmount={finalAmount}
+              contactPhone={contactPhone} setContactPhone={setContactPhone} contactEmail={contactEmail} setContactEmail={setContactEmail} contactState={contactState} setContactState={setContactState}
+              passengers={passengers} handlePaxChange={handlePaxChange} showSuggestions={showSuggestions} setShowSuggestions={setShowSuggestions} savedPassengers={savedPassengers}
+              insurance={insurance} setInsurance={setInsurance} hasGst={hasGst} setHasGst={setHasGst} gstDetails={gstDetails} setGstDetails={setGstDetails} selectedSeats={selectedSeats} 
+              busType={busTypeUrl || apiBusType}
+              departureTime={departureTime}
+              arrivalTime={arrivalTime}
+            />
+          )}
+        </div>
       </div>
 
       {selectedSeats.length > 0 && (
