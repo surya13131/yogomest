@@ -529,7 +529,7 @@ export const fetchSrsBusesV2 = async (
 
     const fromLocation = ((cityMapping as any)[searchSource])?.apiName ?? sourceName;
 
-    const toLocation = ((cityMapping as any)[destDest])?.apiName ?? destName;
+    const toLocation = ((cityMapping as any)[searchDest])?.apiName ?? destName;
 
         const url =
           `${BASE_URL}/api/busBooking/getSrsSchedulesV2/` +
@@ -794,7 +794,7 @@ export const fetchEzeeBusesV2 = async (
 
   const fromLocation = ((cityMapping as any)[searchSource])?.apiName ?? sourceName;
 
-  const toLocation = ((cityMapping as any)[destDest])?.apiName ?? destName;
+  const toLocation = ((cityMapping as any)[searchDest])?.apiName ?? destName;
 
   try {
         const url = `${BASE_URL}/api/bus/ezee/busList-v2/${encodeURIComponent(
