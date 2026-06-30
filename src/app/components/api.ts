@@ -371,14 +371,14 @@ export const fetchVrlBusesV2 = async (
   console.log("========== VRL V2 ==========");
   console.log(sourceName, destName, date);
 
-  const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  const capitalize = (str: string) => str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
   const searchSource = sourceName.toLowerCase();
   const searchDest = destName.toLowerCase();
 
   // VRL seems to prefer capitalized names. We'll try the apiName from mapping first, then capitalize.
-  const sourceAliases = (cityMapping[searchSource] as any)?.apiName ? [(cityMapping[searchSource] as any).apiName] : [capitalize(sourceName)];
-  const destAliases = (cityMapping[searchDest] as any)?.apiName ? [(cityMapping[searchDest] as any).apiName] : [capitalize(destName)];
+  const sourceAliases = ((cityMapping as any)[searchSource])?.apiName ? [((cityMapping as any)[searchSource]).apiName] : [capitalize(sourceName)];
+  const destAliases = ((cityMapping as any)[searchDest])?.apiName ? [((cityMapping as any)[searchDest]).apiName] : [capitalize(destName)];
 
   try {
     for (const from of sourceAliases) {
@@ -527,11 +527,9 @@ export const fetchSrsBusesV2 = async (
     const searchSource = sourceName.toLowerCase();
     const searchDest = destName.toLowerCase();
 
-    const fromLocation =
-      (cityMapping[searchSource] as any)?.apiName ?? sourceName;
+    const fromLocation = ((cityMapping as any)[searchSource])?.apiName ?? sourceName;
 
-    const toLocation =
-      (cityMapping[searchDest] as any)?.apiName ?? destName;
+    const toLocation = ((cityMapping as any)[destDest])?.apiName ?? destName;
 
         const url =
           `${BASE_URL}/api/busBooking/getSrsSchedulesV2/` +
@@ -794,11 +792,9 @@ export const fetchEzeeBusesV2 = async (
   const searchSource = sourceName.toLowerCase();
   const searchDest = destName.toLowerCase();
 
-  const fromLocation =
-    (cityMapping[searchSource] as any)?.apiName ?? sourceName;
+  const fromLocation = ((cityMapping as any)[searchSource])?.apiName ?? sourceName;
 
-  const toLocation =
-    (cityMapping[searchDest] as any)?.apiName ?? destName;
+  const toLocation = ((cityMapping as any)[destDest])?.apiName ?? destName;
 
   try {
         const url = `${BASE_URL}/api/bus/ezee/busList-v2/${encodeURIComponent(
