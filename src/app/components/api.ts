@@ -180,7 +180,7 @@ export interface CitySuggestion {
 export const fetchCitySuggestions = async (
   query: string
 ): Promise<CitySuggestion[]> => {
-  if (query.length < 1) return []; // This was already set to 1, confirming it is correct.
+  if (query.length < 2) return [];
 
   try {
     const normalizedQuery = query.toLowerCase().trim();
