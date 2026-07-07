@@ -63,7 +63,7 @@ export const FAQ_CONTENT: FAQData = {
     { q: "Can I transfer my ticket to someone else instead of cancelling?", a: "Most operators do not allow name changes or ticket transfers." },
     { q: "How can I check if my refund has been processed?", a: "You can track refund status in the “My Bookings” → “Refund Status” section." }
   ],
-  'About YesGoBus': "YesGoBus, over the years, has strived to deliver easy booking solutions to its customers. Our continued efforts have resulted in YesGoBus becoming one of the leading and top-rated bus booking platforms in India for various Bus services. We have a strong presence with a ticket inventory from over 4000 bus partners and 35000 route options on our app and website. Founded in the year 2025, YesGoBus is a pioneer in providing end-to-end software and other value-added solutions such as e-ticketing systems, fleet management solutions, vehicle tracking systems, passenger information systems, and logistics management backed by a 24/7 customer support center."
+  // 'About YesGoBus': "YesGoBus, over the years, has strived to deliver easy booking solutions to its customers. Our continued efforts have resulted in YesGoBus becoming one of the leading and top-rated bus booking platforms in India for various Bus services. We have a strong presence with a ticket inventory from over 4000 bus partners and 35000 route options on our app and website. Founded in the year 2025, YesGoBus is a pioneer in providing end-to-end software and other value-added solutions such as e-ticketing systems, fleet management solutions, vehicle tracking systems, passenger information systems, and logistics management backed by a 24/7 customer support center."
 };
 export const FOOTER_CONTENT = {
   "Top Bus Routes": {

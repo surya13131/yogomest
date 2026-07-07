@@ -37,7 +37,7 @@ import goa from '../assest/goa.png';
 // --- TRANSLATIONS FOR HOME PAGE ---
 const homeTranslations: Record<string, any> = {
   EN: {
-    selectLocation: "Select Location",
+    selectLocation: "Select Source",
     selectDestination: "Select Destination",
     selectDate: "Select Date",
     today: "Today",
@@ -126,6 +126,8 @@ export default function Home() {
   const [destSuggestions, setDestSuggestions] = useState<CitySuggestion[]>([]);
   const [showSourceDropdown, setShowSourceDropdown] = useState(false);
   const [showDestDropdown, setShowDestDropdown] = useState(false);
+  const [loadingSource, setLoadingSource] = useState(false);
+  const [loadingDest, setLoadingDest] = useState(false);
   
   // Stores the exact City Objects
   const [selectedSource, setSelectedSource] = useState<CitySuggestion | null>(null);
@@ -244,12 +246,14 @@ export default function Home() {
 
     // ✅ FIX: Changed from >= 2 to >= 1 to allow single-character search
     if (val.length >= 1) {
+      setLoadingSource(true);
       sourceDebounceRef.current = setTimeout(async () => {
         const results = await fetchCitySuggestions(val);
         if (latestSourceSearch.current === val) {
           setSourceSuggestions(results);
           setShowSourceDropdown(true);
         }
+        setLoadingSource(false);
       }, 300); // 300ms delay
     }
   };
@@ -277,6 +281,7 @@ export default function Home() {
         setDestSuggestions(results);
         setShowDestDropdown(true);
       }
+      setLoadingDest(false);
     }, 300); // 300ms delay
   };
 
@@ -597,7 +602,11 @@ export default function Home() {
                     onBlur={() => setTimeout(() => setShowSourceDropdown(false), 200)}
                   />
                 </div>
-                {showSourceDropdown && (
+                {showSourceDropdown && ( // Only show dropdown if it's explicitly open
+                  // Fix: "No cities found" flicker
+                  loadingSource ? (
+                    <ul className="list-group position-absolute w-100 shadow text-start" style={{ zIndex: 1050, top: 'calc(100% + 5px)', left: 0, maxHeight: '250px', overflowY: 'auto' }}><li className="list-group-item text-muted">Searching...</li></ul>
+                  ) : (
                   <ul className="list-group position-absolute w-100 shadow text-start" style={{ zIndex: 1050, top: 'calc(100% + 5px)', left: 0, maxHeight: '250px', overflowY: 'auto' }}>                    
                     {sourceSuggestions.length > 0 ? ( // Check if there are any suggestions
                       <>
@@ -631,14 +640,15 @@ export default function Home() {
                           </li>
                         ))}
                       </>
-                    ) : ( // This part runs if sourceSuggestions is empty
-                      sourceText.length > 1 && (
+                    ) : ( // This part runs if sourceSuggestions is empty and not loading
+                      sourceText.trim().length >= 2 && ( // Only show "No cities found" if user typed at least 2 chars
                         <li className="list-group-item text-muted">
                           No cities found.
                         </li>
                       )
                     )}
                   </ul>
+                  )
                 )}
               </div>
 
@@ -661,7 +671,11 @@ export default function Home() {
                     onBlur={() => setTimeout(() => setShowDestDropdown(false), 200)} 
                   />
                 </div>
-                {showDestDropdown && (
+                {showDestDropdown && ( // Only show dropdown if it's explicitly open
+                  // Fix: "No cities found" flicker
+                  loadingDest ? (
+                    <ul className="list-group position-absolute w-100 shadow text-start" style={{ zIndex: 1050, top: 'calc(100% + 5px)', left: 0, maxHeight: '250px', overflowY: 'auto' }}><li className="list-group-item text-muted">Searching...</li></ul>
+                  ) : (
                   <ul className="list-group position-absolute w-100 shadow text-start" style={{ zIndex: 1050, top: 'calc(100% + 5px)', left: 0, maxHeight: '250px', overflowY: 'auto' }}>                    
                     {destSuggestions.length > 0 ? (
                       destSuggestions.map((city) => (
@@ -679,13 +693,14 @@ export default function Home() {
                         </li>
                       ))
                     ) : (
-                      destText.length > 1 && ( 
+                      destText.trim().length >= 2 && ( // Only show "No cities found" if user typed at least 2 chars
                         <li className="list-group-item text-muted">
                           No cities found.
                         </li>
                       )
                     )}
                   </ul>
+                  )
                 )}
               </div>
 
@@ -715,8 +730,8 @@ export default function Home() {
                       onChange={handleDateChange} 
                       style={{
                         position: "absolute",
-                        top: "65px",
-                        left: "50%",
+                        top: "128%", // Fix: Date picker position
+                        left: "10%",
                         transform: "translateX(-50%)",
                         width: "1px",
                         height: "1px",

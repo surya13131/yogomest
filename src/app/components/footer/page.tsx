@@ -245,30 +245,40 @@ const Footer: React.FC = () => {
 
               <div className="d-flex justify-content-center align-items-center gap-4">
 
-                <img src={youtubeIcon.src} alt="youtube"
-                  style={{ width: '30px', height: '30px', cursor: 'pointer', opacity: '0.9' }}
-                />
+                <a href="https://youtube.com/@yesgobus?si=tTeiUm9aZ1kNYoB3" target="_blank" rel="noopener noreferrer">
+                  <img src={youtubeIcon.src} alt="youtube"
+                    style={{ width: '30px', height: '30px', cursor: 'pointer', opacity: '0.9' }}
+                  />
+                </a>
 
-                <img src={facebookIcon.src} alt="facebook"
-                  style={{ width: '30px', height: '30px', cursor: 'pointer', opacity: '0.9' }}
-                />
+                <a href="https://www.facebook.com/share/1Ejg8sAmp1/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer">
+                  <img src={facebookIcon.src} alt="facebook"
+                    style={{ width: '52px', height: '42px', cursor: 'pointer', opacity: '0.9' }}
+                  />
+                </a>
 
                 <img src={twitterIcon.src} alt="twitter"
                   style={{ width: '30px', height: '30px', cursor: 'pointer', opacity: '0.9' }}
                 />
 
-                <img src={instagramIcon.src} alt="instagram"
-                  style={{ width: '30px', height: '30px', cursor: 'pointer', opacity: '0.9' }}
-                />
+                <a href="https://www.instagram.com/yesgobus?igsh=MTB1ejh4aTRmbTl0ZQ==" target="_blank" rel="noopener noreferrer">
+                  <img src={instagramIcon.src} alt="instagram"
+                    style={{ width: '30px', height: '30px', cursor: 'pointer', opacity: '0.9' }}
+                  />
+                </a>
 
-                <img src={linkedinIcon.src} alt="linkedin"
-                  style={{ width: '30px', height: '30px', cursor: 'pointer', opacity: '0.9' }}
-                />
+                <a href="https://www.linkedin.com/company/yesgobus/" target="_blank" rel="noopener noreferrer">
+                  <img src={linkedinIcon.src} alt="linkedin"
+                    style={{ width: '30px', height: '30px', cursor: 'pointer', opacity: '0.9' }}
+                  />
+                </a>
 
                 {/* WhatsApp slightly bigger */}
-                <img src={whatsappIcon.src} alt="whatsapp"
-                  style={{ width: '32px', height: '32px', cursor: 'pointer', opacity: '1' }}
-                />
+                <a href="#" target="_blank" rel="noopener noreferrer">
+                  <img src={whatsappIcon.src} alt="whatsapp"
+                    style={{ width: '32px', height: '32px', cursor: 'pointer', opacity: '1' }}
+                  />
+                </a>
 
               </div>
 

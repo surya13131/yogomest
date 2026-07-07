@@ -188,25 +188,30 @@ export const fetchCitySuggestions = async (
     // Mapping fallback logic
     const mappedNames =
       (cityMapping as any)[normalizedQuery]?.sourceCity || [];
+    
+    // Try all aliases until one returns data
+    const searchNames = mappedNames.length > 0 ? mappedNames : [query];
 
-    // Ensures we only send a string, not an array
-    const searchQuery =
-      mappedNames.length > 0 ? mappedNames[0] : query;
-      
-    const cacheKey = `city_${searchQuery}`;
-    const cached = getCachedData(cacheKey);
-    if (cached) return cached;
+    let result: any = { status: 404, data: [] };
+    let finalSearchQuery = "";
 
-    console.time("City Search");
+    for (const name of searchNames) {
+      const cacheKey = `city_${name.toLowerCase()}`;
+      const cached = getCachedData(cacheKey);
+      if (cached) {
+        result = cached;
+        finalSearchQuery = name;
+        break;
+      }
 
-    const res = await fetch(
-      `${BASE_URL}/api/busBooking/searchCity/${searchQuery}`
-    );
-
-    const result = await res.json();
-
-    console.timeEnd("City Search");
-
+      const res = await fetch(`${BASE_URL}/api/busBooking/searchCity/${encodeURIComponent(name)}`);
+      result = await res.json();
+      if (result.status === 200 && result.data?.length) {
+        finalSearchQuery = name;
+        setCachedData(cacheKey, result, CACHE_TTL_CITY);
+        break;
+      }
+    }
     if (result.status !== 200) return [];
 
     const mappedData = (result.data || [])
@@ -249,8 +254,7 @@ export const fetchCitySuggestions = async (
           ezeeStationCode: finalEzeeCode, // ✅ Fully clean string mapped here
         };
       });
-      
-    setCachedData(cacheKey, mappedData, CACHE_TTL_CITY);
+
     return mappedData;
   } catch (err) {
     console.error("City search failed", err);

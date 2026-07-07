@@ -278,6 +278,8 @@ function BusListContent() {
   const [destOptions, setDestOptions] = useState<CitySuggestion[]>([]);
   const [showSourceDropdown, setShowSourceDropdown] = useState(false);
   const [showDestDropdown, setShowDestDropdown] = useState(false);
+  const [loadingSource, setLoadingSource] = useState(false);
+  const [loadingDest, setLoadingDest] = useState(false);
 
   const [selectedSource, setSelectedSource] = useState<CitySuggestion | null>({
     name: urlSourceName, state: "India",
@@ -491,8 +493,22 @@ function BusListContent() {
   };
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.value) {
-      setJourneyDate(e.target.value);
+    if (!e.target.value) return;
+
+    setJourneyDate(e.target.value);
+
+    const today = formatApiDate(new Date());
+
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = formatApiDate(tomorrow);
+
+    if (e.target.value === today) {
+      setSelectedDay("today");
+    } else if (e.target.value === tomorrowStr) {
+      setSelectedDay("tomorrow");
+    } else {
+      setSelectedDay("custom");
     }
   };
 
@@ -506,6 +522,7 @@ function BusListContent() {
     setInputSource(val);
     setSelectedSource(null);
     if (val.length >= 2) {
+      setLoadingSource(true);
       const results = await fetchCitySuggestions(val);
       const filtered = results.sort((a, b) => {
         const search = val.toLowerCase();
@@ -517,7 +534,9 @@ function BusListContent() {
       });
       setSourceOptions(filtered);
       setShowSourceDropdown(true);
+      setLoadingSource(false);
     } else if (val.length === 0) {
+      setLoadingSource(true);
       const recent = JSON.parse(localStorage.getItem("recentCities") || "[]");
       if (recent.length > 0) {
         setSourceOptions(recent);
@@ -526,6 +545,7 @@ function BusListContent() {
         setSourceOptions(results.sort((a, b) => (a.name || "").localeCompare(b.name || "")));
       }
       setShowSourceDropdown(true);
+      setLoadingSource(false);
     } else {
       setSourceOptions([]);
       setShowSourceDropdown(false);
@@ -537,6 +557,7 @@ function BusListContent() {
     setInputDest(val);
     setSelectedDest(null);
     if (val.length >= 2) {
+      setLoadingDest(true);
       const results = await fetchCitySuggestions(val);
       const filtered = results.sort((a, b) => {
         const search = val.toLowerCase();
@@ -548,7 +569,9 @@ function BusListContent() {
       });
       setDestOptions(filtered);
       setShowDestDropdown(true);
+      setLoadingDest(false);
     } else if (val.length === 0) {
+      setLoadingDest(true);
       const recent = JSON.parse(localStorage.getItem("recentCities") || "[]");
       if (recent.length > 0) {
         setDestOptions(recent);
@@ -556,7 +579,8 @@ function BusListContent() {
         const results = await fetchCitySuggestions("a");
         setDestOptions(results.sort((a, b) => (a.name || "").localeCompare(b.name || "")));
       }
-      setShowDestDropdown(true);
+      setShowDestDropdown(true); // Keep dropdown open for recent cities
+      setLoadingDest(false);
     } else {
       setDestOptions([]);
       setShowDestDropdown(false);
@@ -598,8 +622,9 @@ function BusListContent() {
     setFilterText(filterInput);
   };
 
+  
   const divider = <div className="divider-vertical d-none d-lg-block" />;
-
+`1`
   const theme = {
     pageBg: "#FFFFFF", primary: "#0D2B4C", blue: "#2F6FED",
     border: "#E0E5EA", tagBg: "#FFF3CD", tagText: "#B47100",
@@ -721,14 +746,23 @@ function BusListContent() {
           ...(ezeeV2 || []),
         ];
 
-        console.log(
-          "ZERO SEAT BUSES",
-          combinedRaw.filter(
-            bus => getAvailableSeats(bus) <= 0
-          )
-        );
+        // De-duplicate buses from different API versions (V2 vs V3)
+        const uniqueBuses = new Map<string, NormalizedBus>();
+        combinedRaw.forEach(bus => {
+          const busType = getBusType(bus) || 'unknown';
+          const depTime = bus.departureTime || '00:00';
+          const operator = bus.operatorName || 'unknown';
+          
+          // Create a more robust unique key
+          const uniqueKey = `${operator}-${depTime}-${busType}`;
 
-        const combined = combinedRaw.filter(bus => getAvailableSeats(bus) > 0).map(bus => ({
+          // Prioritize buses with a lower price if a duplicate is found
+          if (!uniqueBuses.has(uniqueKey) || (uniqueBuses.get(uniqueKey)?.price || Infinity) > bus.price) {
+            uniqueBuses.set(uniqueKey, bus);
+          }
+        });
+
+        const combined = Array.from(uniqueBuses.values()).filter(bus => getAvailableSeats(bus) > 0).map(bus => ({
           ...bus,
           rating: getSimulatedRating(bus),
         }));
@@ -785,6 +819,13 @@ function BusListContent() {
     });
   };
 
+  const normalizeOperatorName = (text = "") =>
+    text
+      .toLowerCase()
+      .replace(/\([^)]*\)/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+
   const displayedBuses = useMemo(() => {
     let result = [...buses];
 
@@ -797,14 +838,46 @@ function BusListContent() {
       "premium",
       "slx",
       "i-shift"
-    ];
+      ];
 
-    if (filterText.trim() !== "") {
-      const lower = filterText.toLowerCase();
-      result = result.filter(bus =>
-        (bus.operatorName || "").toLowerCase().includes(lower) ||
-        (getBusType(bus) || "").toLowerCase().includes(lower)
-      );
+    if (filterText.trim()) {
+      const search = filterText.trim().toLowerCase();
+
+      result = result.filter(bus => {
+        const operator = normalizeOperatorName(bus.operatorName || "");
+        const busType = (getBusType(bus) || "").toLowerCase();
+
+        return (
+          operator.includes(search) ||
+          busType.includes(search)
+        );
+      });
+    
+      result = result
+        .filter(bus => {
+          const operator = normalizeOperatorName(bus.operatorName || "");
+          const busType = (getBusType(bus) || "").toLowerCase();
+    
+          return (
+            operator.includes(search) ||
+            busType.includes(search)
+          );
+        })
+        .sort((a, b) => {
+          const aName = normalizeOperatorName(a.operatorName || "");
+          const bName = normalizeOperatorName(b.operatorName || "");
+    
+          const aStarts = aName.startsWith(search);
+          const bStarts = bName.startsWith(search);
+    
+          if (aStarts && !bStarts) return -1;
+          if (!aStarts && bStarts) return 1;
+    
+          const aIndex = aName.indexOf(search);
+          const bIndex = bName.indexOf(search);
+    
+          return aIndex - bIndex;
+        });
     }
 
     if (activeFilter) {
@@ -1017,6 +1090,9 @@ function BusListContent() {
             value={filterInput}
             onChange={(e) => {
               setFilterInput(e.target.value);
+              const value = e.target.value;
+              setFilterInput(value);
+              setFilterText(value);
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
@@ -1300,25 +1376,34 @@ function BusListContent() {
                     }
                   }} onBlur={() => setTimeout(() => setShowSourceDropdown(false), 200)}
                   className="search-input" />
-                {showSourceDropdown && sourceOptions.length > 0 && (
+                {showSourceDropdown && (
                   <ul className="list-group position-absolute w-100 shadow" style={{ zIndex: 1050, top: '100%', left: 0, maxHeight: '250px', overflowY: 'auto' }}>
-                    {sourceOptions.map((city, idx) => (
-                      <li key={idx} className="list-group-item list-group-item-action py-2" style={{ cursor: 'pointer', fontSize: '14px' }}
-                        onMouseDown={() => { 
-                          setInputSource(city.name); 
-                          setSelectedSource(city); 
-                          setShowSourceDropdown(false); 
-                          const recent = JSON.parse(localStorage.getItem("recentCities") || "[]");
-                          const updated = [city, ...recent.filter((c: any) => c.name !== city.name)].slice(0, 5);
-                          localStorage.setItem("recentCities", JSON.stringify(updated));
-                        }}>
-                        <i className="bi bi-geo-alt me-2 text-muted"></i>
-                        <span className="fw-medium">{city.name}</span>
-                        <span className="text-muted small ms-1">, {city.state}</span>
-                      </li>
-                    ))}
+                    {loadingSource ? (
+                      <li className="list-group-item py-2" style={{ fontSize: '14px' }}>Searching...</li>
+                    ) : sourceOptions.length > 0 ? (
+                      sourceOptions.map((city, idx) => (
+                        <li key={idx} className="list-group-item list-group-item-action py-2" style={{ cursor: 'pointer', fontSize: '14px' }}
+                          onMouseDown={() => { 
+                            setInputSource(city.name); 
+                            setSelectedSource(city); 
+                            setShowSourceDropdown(false); 
+                            const recent = JSON.parse(localStorage.getItem("recentCities") || "[]");
+                            const updated = [city, ...recent.filter((c: any) => c.name !== city.name)].slice(0, 5);
+                            localStorage.setItem("recentCities", JSON.stringify(updated));
+                          }}>
+                          <i className="bi bi-geo-alt me-2 text-muted"></i>
+                          <span className="fw-medium">{city.name}</span>
+                          <span className="text-muted small ms-1">, {city.state}</span>
+                        </li>
+                      ))
+                    ) : (
+                      inputSource.trim().length >= 2 && (
+                        <li className="list-group-item py-2" style={{ fontSize: '14px' }}>No cities found.</li>
+                      )
+                    )}
                   </ul>
                 )}
+
               </div>
             </div>
             {divider}
@@ -1341,22 +1426,30 @@ function BusListContent() {
                     }
                   }} onBlur={() => setTimeout(() => setShowDestDropdown(false), 200)}
                   className="search-input" />
-                {showDestDropdown && destOptions.length > 0 && (
+                {showDestDropdown && (
                   <ul className="list-group position-absolute w-100 shadow" style={{ zIndex: 1050, top: '100%', left: 0, maxHeight: '250px', overflowY: 'auto' }}>
-                    {destOptions.map((city, idx) => (
-                      <li key={idx} className="list-group-item list-group-item-action py-2" style={{ cursor: 'pointer', fontSize: '14px' }}
-                        onMouseDown={() => { 
-                          setInputDest(city.name); 
-                          setSelectedDest(city); 
-                          setShowDestDropdown(false); 
-                          const recent = JSON.parse(localStorage.getItem("recentCities") || "[]");
-                          const updated = [city, ...recent.filter((c: any) => c.name !== city.name)].slice(0, 5);
-                          localStorage.setItem("recentCities", JSON.stringify(updated));
-                        }}>
-                        <i className="bi bi-geo-alt me-2 text-muted"></i>
-                        <span className="fw-medium">{city.name}</span>
-                      </li>
-                    ))}
+                    {loadingDest ? (
+                      <li className="list-group-item py-2" style={{ fontSize: '14px' }}>Searching...</li>
+                    ) : destOptions.length > 0 ? (
+                      destOptions.map((city, idx) => (
+                        <li key={idx} className="list-group-item list-group-item-action py-2" style={{ cursor: 'pointer', fontSize: '14px' }}
+                          onMouseDown={() => { 
+                            setInputDest(city.name); 
+                            setSelectedDest(city); 
+                            setShowDestDropdown(false); 
+                            const recent = JSON.parse(localStorage.getItem("recentCities") || "[]");
+                            const updated = [city, ...recent.filter((c: any) => c.name !== city.name)].slice(0, 5);
+                            localStorage.setItem("recentCities", JSON.stringify(updated));
+                          }}>
+                          <i className="bi bi-geo-alt me-2 text-muted"></i>
+                          <span className="fw-medium">{city.name}</span>
+                        </li>
+                      ))
+                    ) : (
+                      inputDest.trim().length >= 2 && (
+                        <li className="list-group-item py-2" style={{ fontSize: '14px' }}>No cities found.</li>
+                      )
+                    )}
                   </ul>
                 )}
               </div>
@@ -1370,8 +1463,22 @@ function BusListContent() {
                 <span style={{ fontSize: "12px", color: "#6B7280" }}>{t.dateOfJourney || "Date"}</span>
                 <span style={{ fontWeight: "700", fontSize: "16px" }}>{journeyDate}</span>
               </div>
-              <input ref={dateInputRef} type="date" onChange={handleDateChange}
-                style={{ position: "absolute", opacity: 0, pointerEvents: "none" }} />
+              <input
+                ref={dateInputRef}
+                type="date"
+                value={journeyDate}
+                min={formatApiDate(new Date())}
+                onChange={handleDateChange}
+                style={{
+                  position: "absolute",
+                  top: "140%",
+                  left: "10px",
+                  width: "1px",
+                  height: "1px",
+                  opacity: 0,
+                  pointerEvents: "none",
+                }}
+              />
             </div>
 
             <div className="search-action-area d-flex align-items-center w-100 w-lg-auto px-3 py-3 py-lg-0 gap-2">
@@ -1476,7 +1583,7 @@ function BusListContent() {
                 const arrTimeAmPm = arrTimeMatch ? arrTimeMatch[2] : "";
 
                 return (
-                  <div key={bus.id} className="bus-card card border-0 shadow-sm mb-4" onMouseEnter={() => handlePrefetchSeats(bus)}>
+                  <div key={`${bus.apiProvider}-${bus.id}`} className="bus-card card border-0 shadow-sm mb-4" onMouseEnter={() => handlePrefetchSeats(bus)}>
                     <div className="card-body p-3 py-4">
                       <div className="row align-items-center g-3">
 

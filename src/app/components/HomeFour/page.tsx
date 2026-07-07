@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image'; // Import Next.js Image component
-
-import qrImage from '../assest/Qr.png'; 
+import playStoreQr from '../assest/PlaystoreQr.jpeg'; // QR for Play Store
+import appStoreQr from '../assest/AppstoeQr.jpeg'; // QR for App Store (using same for now)
 import playStore from '../assest/playstore.png';
 import appStore from '../assest/appstore.png';
-import windowsStore from '../assest/window.png';
+// import windowsStore from '../assest/window.png';
 import styles from '../css/Home.module.css';
 
 import Footer from '../footer/page'; 
@@ -221,42 +221,52 @@ const Home: React.FC = () => {
               
               {/* FIXED IMAGE SECTION */}
               <div className="d-flex flex-wrap justify-content-center align-items-center gap-2 gap-sm-3 mt-3">
-                <Image 
-                  src={windowsStore} 
-                  alt="Windows" 
-                  className={styles.storeImg}
-                  width={135} 
-                  height={40}
-                />
-                <Image 
-                  src={appStore} 
-                  alt="App Store" 
-                  className={styles.storeImg}
-                  width={135}
-                  height={40}
-                />
-                <Image 
-                  src={playStore} 
-                  alt="Play Store" 
-                  className={styles.storeImg}
-                  width={135}
-                  height={40}
-                />
+                <a
+                  href="https://play.google.com/store/apps/details?id=com.yesgobus.bustravel&pcampaignid=web_share"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Image 
+                    src={playStore} 
+                    alt="Get it on Google Play" 
+                    className={styles.storeImg}
+                    width={135}
+                    height={40}
+                    style={{ cursor: "pointer" }}
+                  />
+                </a>
+                <a
+                  href="https://apps.apple.com/in/app/yesgobus/id6758322155"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Image 
+                    src={appStore} 
+                    alt="Download on the App Store" 
+                    className={styles.storeImg}
+                    width={135}
+                    height={40}
+                    style={{ cursor: "pointer" }}
+                  />
+                </a>
               </div>
             </div>
 
-            <div className="col-lg-3 text-lg-end text-center px-0">
-              <div className={styles.qrContainer + " mx-auto ms-lg-auto"}>
-                <Image 
-                  src={qrImage} 
-                  alt="QR Code" 
-                  width={145} 
-                  height={145} 
-                />
+            <div className="col-lg-3 text-lg-end text-center px-5 mt-4 mt-lg-0">
+              <div className="d-flex flex-column align-items-center align-items-lg-end gap-3">
+                <div className="text-center">
+                  <Image src={playStoreQr} alt="Scan for Play Store" width={120} height={120} />
+                  <p className={`small mt-2 ${styles.navyText}`} style={{ fontWeight: 500 }}>
+                    Scan for Play Store
+                  </p>
+                </div>
+                <div className="text-center">
+                  <Image src={appStoreQr} alt="Scan for App Store" width={120} height={120} />
+                  <p className={`small mt-2 ${styles.navyText}`} style={{ fontWeight: 500 }}>
+                    Scan for App Store
+                  </p>
+                </div>
               </div>
-              <p className={`small mt-3 ${styles.navyText}`} style={{ fontWeight: 500 }}>
-                {t.scanQr1} <br/> {t.scanQr2}
-              </p>
             </div>
           </div>
         </div>

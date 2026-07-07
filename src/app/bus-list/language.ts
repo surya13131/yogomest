@@ -1,10 +1,10 @@
 export const SUPPORTED_LANGUAGES = [
   { code: 'EN', name: 'English' },
-  { code: 'TA', name: 'Tamil' },
-  { code: 'ML', name: 'Malayalam' },
-  { code: 'TE', name: 'Telugu' },
-  { code: 'HI', name: 'Hindi' },
-  { code: 'KN', name: 'Kannada' }
+  { code: 'TA', name: 'தமிழ்' },
+  { code: 'ML', name: 'മലയാളം' },
+  { code: 'TE', name: 'తెలుగు' },
+  { code: 'HI', name: 'हिन्दी' },
+  { code: 'KN', name: 'ಕನ್ನಡ' }
 ];
 
 // Type definition for our translation keys so TypeScript helps auto-complete
