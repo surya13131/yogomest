@@ -296,17 +296,14 @@ export default function Home() {
 
   const handleSearchClick = () => {
     if (!selectedSource || !selectedDest || !selectedDate) {
-      alert("Please select a valid Source, Destination, and Date from the dropdowns.");
       return;
     }
 
     if (!selectedSource.id || selectedSource.id === 'undefined') {
-      alert("Invalid Source City. Please search again and click the city from the dropdown list.");
       return;
     }
     
     if (!selectedDest.id || selectedDest.id === 'undefined') {
-      alert("Invalid Destination City. Please search again and click the city from the dropdown list.");
       return;
     }
 
