@@ -316,12 +316,9 @@ export default function Home() {
       })
     );
 
-    // ✅ FIX 3: Accurately split at the parenthesis and grab the string at index, then trim.
-    const cleanName = (name: string) => (name || "").split("(")[0].trim();
-
     const queryParams = new URLSearchParams({
-      sourceName: cleanName(selectedSource.name),
-      destName: cleanName(selectedDest.name),
+      sourceName: selectedSource.name,
+      destName: selectedDest.name,
       vrlSourceId: selectedSource.vrlCityId || "",
       vrlDestId: selectedDest.vrlCityId || "",
       srsSourceId: selectedSource.srsCityId || "",

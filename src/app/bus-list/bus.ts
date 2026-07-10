@@ -31,26 +31,27 @@ export const fetchAllBusData = async (
   let eDest = ezeeDestCode;
 
   // 1. Resolve IDs if they are missing
-  if (!vSource || !vDest || !sSource || !sDest || !eSource || !eDest) {
+  const allSourceIdsAvailable = vSource && sSource && eSource;
+  const allDestIdsAvailable = vDest && sDest && eDest;
+
+  if (!allSourceIdsAvailable || !allDestIdsAvailable) {
     const [sourceRes, destRes] = await Promise.all([
       fetchCitySuggestions(sourceName),
       fetchCitySuggestions(destName)
     ]);
-    const sMatch = sourceRes.find((c: any) => c.name.toLowerCase() === sourceName.toLowerCase());
-    const dMatch = destRes.find((c: any) => c.name.toLowerCase() === destName.toLowerCase());
+    const sMatch = sourceRes.find((c: any) => c.name.toLowerCase().startsWith(sourceName.toLowerCase()));
+    const dMatch = destRes.find((c: any) => c.name.toLowerCase().startsWith(destName.toLowerCase()));
 
     if (!sMatch || !dMatch) {
       throw new Error("City must be selected from dropdown");
     }
-    
-    if (sMatch && dMatch) {
-      vSource = vSource || sMatch.vrlCityId || undefined;
-      vDest = vDest || dMatch.vrlCityId || undefined;
-      sSource = sSource || sMatch.srsCityId || undefined;
-      sDest = sDest || dMatch.srsCityId || undefined;
-      eSource = eSource || sMatch.ezeeStationCode || undefined;
-      eDest = eDest || dMatch.ezeeStationCode || undefined;
-    }
+
+    vSource = vSource || sMatch.vrlCityId;
+    sSource = sSource || sMatch.srsCityId;
+    eSource = eSource || sMatch.ezeeStationCode;
+    vDest = vDest || dMatch.vrlCityId;
+    sDest = sDest || dMatch.srsCityId;
+    eDest = eDest || dMatch.ezeeStationCode;
   }
 
   // 2. Fetch all data in parallel
