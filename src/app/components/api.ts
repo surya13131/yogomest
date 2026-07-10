@@ -234,11 +234,11 @@ export const fetchCitySuggestions = async (
           "";
 
         if (Array.isArray(rawEzeeData)) {
-          finalEzeeCode = (rawEzeeData || "").toString();
+          finalEzeeCode = rawEzeeData.length > 0 ? String(rawEzeeData[0]) : "";
         } else {
-          finalEzeeCode = rawEzeeData.toString();
+          finalEzeeCode = String(rawEzeeData || "");
         }
-
+        
         console.log("CITY RAW:", city.name);
         console.log("VRL/SRS ID:", city.id);
         console.log("EZEE Code (Final):", finalEzeeCode);
