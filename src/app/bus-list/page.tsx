@@ -624,7 +624,6 @@ function BusListContent() {
 
   
   const divider = <div className="divider-vertical d-none d-lg-block" />;
-`1`
   const theme = {
     pageBg: "#FFFFFF", primary: "#0D2B4C", blue: "#2F6FED",
     border: "#E0E5EA", tagBg: "#FFF3CD", tagText: "#B47100",
