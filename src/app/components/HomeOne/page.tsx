@@ -322,7 +322,7 @@ export default function Home() {
       vrlSourceId: selectedSource.vrlCityId || "",
       vrlDestId: selectedDest.vrlCityId || "",
       srsSourceId: selectedSource.srsCityId || "",
-      srsDestId: selectedDest.srsCityId || "",
+      srsDestId: selectedDest.srsCityId `|| "",
       ezeeSourceCode: selectedSource.ezeeStationCode || "",
       ezeeDestCode: selectedDest.ezeeStationCode || "",
       date: selectedDate

@@ -20,6 +20,20 @@ const setCachedData = (key: string, data: any, ttl: number) => {
 };
 
 const extractValidPrice = (bus: any): number => {
+  const fareList = bus.fareList || bus.bus?.fareList;
+
+  if (Array.isArray(fareList) && fareList.length > 0) {
+    const fares = fareList
+      .map((f: any) => Number(f))
+      .filter((f: number) => !isNaN(f) && f > 0);
+
+    if (fares.length) {
+      return Math.min(...fares);
+    }
+  }
+
+
+
   const possiblePrices = [
     bus.LowestFare, bus.lowestFare, bus.lowest_fare, bus.minFare, bus.min_fare,
     bus.TotalFare, bus.totalFare, bus.total_fare,
@@ -897,6 +911,11 @@ export const fetchEzeeBusesV3 = async (
     const busArray = Array.isArray(rawData) ? rawData : [];
     
     return busArray.map((bus: any): NormalizedBus => {
+      console.log("fareList", bus.fareList);
+      console.log("price", getMinimumAvailableFare(bus));
+      console.log("fallback", extractValidPrice(bus));
+
+
       const seatLayoutList = bus.seatLayoutList || bus.bus?.seatLayoutList || [];
       
       const calculatedAvailableSeats = seatLayoutList.filter(
