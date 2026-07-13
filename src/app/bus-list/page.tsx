@@ -746,19 +746,12 @@ function BusListContent() {
           ...(ezeeV2 || []),
         ];
 
-        // De-duplicate buses from different API versions (V2 vs V3)
+        // The `fetchAllBusData` function (or equivalent logic) should be the single source of truth for deduplication.
+        // The logic below was incorrectly removing valid trips.
         const uniqueBuses = new Map<string, NormalizedBus>();
         combinedRaw.forEach(bus => {
-          const busType = getBusType(bus) || 'unknown';
-          const depTime = bus.departureTime || '00:00';
-          const operator = bus.operatorName || 'unknown';
-          
-          // Create a more robust unique key
-          const uniqueKey = `${operator}-${depTime}-${busType}`;
-
-          // Prioritize buses with a lower price if a duplicate is found
-          if (!uniqueBuses.has(uniqueKey) || (uniqueBuses.get(uniqueKey)?.price || Infinity) > bus.price) {
-            uniqueBuses.set(uniqueKey, bus);
+          if (!uniqueBuses.has(bus.id) || (uniqueBuses.get(bus.id)!.price > bus.price)) {
+            uniqueBuses.set(bus.id, bus);
           }
         });
 
@@ -976,8 +969,8 @@ function BusListContent() {
   }, [displayedBuses]);
 
   const dynamicFilters = [
-    { name: "Primo Bus",         count: filterCounts["Primo Bus"],         icon: busicon1 },
-    { name: "Free Cancellation",  count: filterCounts["Free Cancellation"],  icon: busicon2 },
+    // { name: "Primo Bus",         count: filterCounts["Primo Bus"],         icon: busicon1 },
+    // { name: "Free Cancellation", count: filterCounts["Free Cancellation"], icon: busicon2 },
     { name: "AC",                 count: filterCounts["AC"],                 icon: busicon3 },
     { name: "Sleeper",            count: filterCounts["Sleeper"],            icon: busicon4 },
     { name: "Single Seats",       count: filterCounts["Single Seats"],       icon: busicon5 },

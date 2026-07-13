@@ -121,14 +121,23 @@ export const fetchAllBusData = async (
 
 
   // 3. Combine Buses
-  let combinedBuses: NormalizedBus[] = [
+  const combinedBuses: NormalizedBus[] = [];
+  const uniqueBuses = new Map<string, NormalizedBus>();
+
+  [
     ...(vrlV3 || []),
     ...(vrlV2 || []),
     ...(srsV3 || []),
     ...(srsV2 || []),
     ...(ezeeV2 || []),
     ...(ezeeV3 || []),
-  ].filter(bus => Number(bus.availableSeats ?? 0) > 0);
+  ].forEach(bus => {
+    if (!uniqueBuses.has(bus.id) || (uniqueBuses.get(bus.id)!.price > bus.price)) {
+      uniqueBuses.set(bus.id, bus);
+    }
+  });
+  
+  combinedBuses.push(...Array.from(uniqueBuses.values()).filter(bus => Number(bus.availableSeats ?? 0) > 0));
 
   // 4. Combine Filters (Boarding / Dropping)
   let combinedBoarding: any[] = [];
