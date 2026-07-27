@@ -420,6 +420,7 @@ function SeatLayoutContent() {
               journeyDateShort={journeyDateShort} 
               busType={busTypeUrl || apiBusType}
               lastSeats={lastSeats}
+              tripCode={tripCode ?? ""}
               provider={provider || ""}
               activeTab={activeTab} setActiveTab={setActiveTab}
               boardingPoints={boardingPoints} droppingPoints={droppingPoints} sourceCity={sourceCity} destinationCity={destinationCity}

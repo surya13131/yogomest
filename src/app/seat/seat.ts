@@ -567,6 +567,25 @@ export const fixBrokenSeatLayout = (
       });
     }
 
+    const isBharathiSleeper =
+      String(operatorName || "").toLowerCase().includes("bharathi") &&
+      String(busType || "").toLowerCase().includes("sleeper");
+
+    if (isBharathiSleeper) {
+      return seats.map(seat => {
+        let col = seat.col;
+
+        // Preserve Bharathi 2+1 sleeper layout
+        if (col === 1) col = 2;   // move first double berth after aisle
+        if (col === 3) col = 3;   // second double berth
+
+        return {
+          ...seat,
+          col,
+        };
+      });
+    }
+
     return seats;
   }
 
@@ -1439,6 +1458,16 @@ export const fetchSeatLayoutData = async ({
         let actualRow = 0;
 
         allRowsRaw.forEach((rowStr: string) => {
+          const ignoreTokens = new Set([
+            "WR_IMG",
+            "WR-IMG",
+            ".GY",
+            ".LGY",
+            ".UGY",
+            "--",
+            ""
+          ]);
+
           const rawCols    = rowStr.split("-").map(c => c.trim());
           const isEmptyRow =
             !rowStr || rowStr.trim() === "" ||
@@ -1460,6 +1489,12 @@ export const fetchSeatLayoutData = async ({
             const parts    = cleanCol.split("|");
             const seatId   = parts?.[0]?.trim() || "";
             const typeCode = parts?.[1]?.trim() || "";
+
+            if (ignoreTokens.has(seatId.toUpperCase())) {
+              // This is a placeholder, not a real seat. Skip it.
+              visualCol++;
+              return;
+            }
 
             if (seatId) {
               const isAvailable = availableMap.has(seatId);
@@ -1504,6 +1539,24 @@ export const fetchSeatLayoutData = async ({
       const rawUpper = parseCoachString(layoutData.upper_coach_details, true,  0);
 
       fetchedSeats = [...rawLower, ...rawUpper];
+
+      const isKrishBus =
+        provider === "SRS" &&
+        String(operatorName || "").toLowerCase() === "krish travels(jksn)";
+
+      if (isKrishBus) {
+        console.log("[Layout] Krish Travels (jksn) bus detected. Filtering out placeholder IDs.");
+        fetchedSeats = fetchedSeats.filter(seat => {
+          const id = String(seat.id).toUpperCase();
+          return ![
+            "WR_IMG",
+            ".LGY",
+            ".UGY",
+            ".GY",
+            "--"
+          ].includes(id);
+        });
+      }
 
       // ✅ National Travels NTS-103A Override
       const isNTS103A =

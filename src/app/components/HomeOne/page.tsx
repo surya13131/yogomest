@@ -316,6 +316,7 @@ export default function Home() {
       })
     );
 
+
     const queryParams = new URLSearchParams({
       sourceName: selectedSource.name,
       destName: selectedDest.name,
@@ -327,8 +328,7 @@ export default function Home() {
       ezeeDestCode: selectedDest.ezeeStationCode || "",
       date: selectedDate
     });
-
-    router.push(`/bus-list?${queryParams.toString()}`);
+router.push(`/bus-list?${queryParams.toString()}`);
   };
 
   const offers = [
@@ -365,7 +365,7 @@ export default function Home() {
     <>
       <Navbar />
       
-      {/* Search Bar Styling */}
+     
       <style>{`
         .search-box-figma-container {
           width: 90% !important; 
@@ -596,8 +596,7 @@ export default function Home() {
                     onBlur={() => setTimeout(() => setShowSourceDropdown(false), 200)}
                   />
                 </div>
-                {showSourceDropdown && ( // Only show dropdown if it's explicitly open
-                  // Fix: "No cities found" flicker
+                {showSourceDropdown && ( 
                   loadingSource ? (
                     <ul className="list-group position-absolute w-100 shadow text-start" style={{ zIndex: 1050, top: 'calc(100% + 5px)', left: 0, maxHeight: '250px', overflowY: 'auto' }}><li className="list-group-item text-muted">Searching...</li></ul>
                   ) : (

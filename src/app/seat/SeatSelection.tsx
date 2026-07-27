@@ -73,6 +73,7 @@ interface Step1Props {
   toggleAccordion: (id: string) => void;
   provider: string;
   lastSeats: string[];
+  tripCode: string;
 }
 
 type SeatWithGrid = NormalizedSeat & {
@@ -336,6 +337,7 @@ export default function Step1SeatSelection({
   toggleAccordion,
   provider,
   lastSeats,
+  tripCode,
 }: Step1Props) {
   const isVrl = provider?.toLowerCase() === "vrl";
   
@@ -615,9 +617,142 @@ const normalizeColumns = (deckSeats: NormalizedSeat[]) => {
     });
   };
 
+  const formatBharathiSleeper = (seats: NormalizedSeat[]): NormalizedSeat[] => {
+    console.log("[Layout] Formatting Bharathi 2+1 sleeper layout.");
+  
+    // 1. Sort seats by their numeric ID (e.g., SL1, SL2, ...)
+    const sortedSeats = [...seats].sort((a, b) => {
+      const numA = parseInt(String(a.id).replace(/\D/g, ""), 10);
+      const numB = parseInt(String(b.id).replace(/\D/g, ""), 10);
+      return numA - numB;
+    });
+  
+    // 2. Group seats into logical rows of 3 (for a 2+1 layout)
+    const rowGroups: NormalizedSeat[][] = [];
+    for (let i = 0; i < sortedSeats.length; i += 3) {
+      rowGroups.push(sortedSeats.slice(i, i + 3));
+    }
+  
+    // 3. Reassign row and column indices based on the 2+1 pattern
+    const result: NormalizedSeat[] = [];
+    rowGroups.forEach((group, rowIndex) => {
+      // Sort seats within the group by original column to identify single/double sides
+      const sortedGroup = group.sort((a, b) => a.col - b.col);
+  
+      if (sortedGroup.length === 3) {
+        // Standard 2+1 row
+        result.push({ ...sortedGroup[0], row: rowIndex, col: 0 }); // Single side
+        result.push({ ...sortedGroup[1], row: rowIndex, col: 2 }); // Double side 1
+        result.push({ ...sortedGroup[2], row: rowIndex, col: 3 }); // Double side 2
+      } else {
+        // For partial rows (like the last row), place them sequentially
+        sortedGroup.forEach((seat, colIndex) => {
+          const targetCols = [0, 2, 3]; // Place in the standard 2+1 columns
+          result.push({
+            ...seat,
+            row: rowIndex,
+            col: targetCols[colIndex] ?? colIndex,
+          });
+        });
+      }
+    });
+  
+    console.log("[Layout] Bharathi sleeper layout formatted successfully.");
+    return result;
+  };
+
   // ✅ FIX: Compute safe CSS Grid Rows based on sleeper height
-  const computeVisualGrid = (deckSeats: NormalizedSeat[], isVrl: boolean = false): SeatWithGrid[] => {
+  const computeVisualGrid = (deckSeats: NormalizedSeat[], isVrl: boolean = false, tripCode: string = ""): SeatWithGrid[] => {
     if (!deckSeats || deckSeats.length === 0) return [];
+
+    const isAnkitShrinathSleeper =
+      provider === "SRS" &&
+      operatorName?.toLowerCase().includes("ankit shrinath") &&
+      busType?.toLowerCase().includes("2+1") &&
+      busType?.toLowerCase().includes("sleeper");
+
+    if (isAnkitShrinathSleeper) {
+      deckSeats = deckSeats.map(seat => {
+        if (!seat.isUpper && seat.id === "25") {
+          return {
+            ...seat,
+            col: 1,              // aisle column
+          };
+        }
+        return seat;
+      });
+    }
+
+    const isBharathi =
+      provider === "EZEE_V3" &&
+      operatorName?.toLowerCase().includes("bharathi");
+
+    const isBharathiSleeper =
+      provider === "EZEE_V3" &&
+      operatorName?.toLowerCase().includes("bharathi") &&
+      busType?.toLowerCase().includes("2+1") &&
+      busType?.toLowerCase().includes("sleeper") &&
+      !busType?.toLowerCase().includes("seater");
+
+    if (isBharathiSleeper && !busType?.toLowerCase().includes("seater")) {
+      // Apply the special formatting at the beginning
+      deckSeats = formatBharathiSleeper(deckSeats);
+    }
+
+    const isBharathiMixed =
+      provider === "EZEE_V3" &&
+      operatorName?.toLowerCase().includes("bharathi") &&
+      busType?.toLowerCase().includes("seater") &&
+      busType?.toLowerCase().includes("sleeper");
+
+    const isSriVaralakshmi =
+      provider === "EZEE_V3" &&
+      operatorName?.toLowerCase().includes("sri varalakshmi");
+
+
+    if (isBharathiMixed) {
+      console.log("[Bharathi Mixed] Applying targeted layout adjustments.");
+      deckSeats = deckSeats.map((seat) => {
+        // Move G-row down to create a visual gap.
+        if (seat.id === "G1") {
+          return { ...seat, row: seat.row + 1 };
+        }
+        if (seat.id === "G2") {
+          return { ...seat, row: seat.row + 1 };
+        }
+
+        // Apply specific coordinate fixes for the last few seats.
+        switch (seat.id) {
+          case "J2":
+            return { ...seat, row: 9, col: 2 };
+
+          case "K1":
+            return { ...seat, row: 10, col: 1 };
+
+          case "K2":
+            return { ...seat, row: 10, col: 2 };
+
+          case "K3":
+            return { ...seat, row: 10, col: 3 };
+
+          default:
+            return seat;
+        }
+      });
+      console.log("[Bharathi Mixed] Raw API data for key seats:", deckSeats.filter(s => ["SL1", "SL2", "SL3", "SL4", "SL5", "J2", "K1", "K2", "K3"].includes(s.id)).map(s => ({ id: s.id, row: s.row, col: s.col })));
+    }
+
+    const isSriVaralakshmiSleeper = provider === "EZEE_V3" &&
+    operatorName?.toLowerCase().includes("sri varalakshmi") &&
+    busType?.toLowerCase().includes("2+1") &&
+    busType?.toLowerCase().includes("sleeper") &&
+    !busType?.toLowerCase().includes("seater");
+
+    if (isSriVaralakshmiSleeper) {
+      deckSeats = deckSeats.map(seat =>
+        seat.isUpper ? { ...seat, row: Math.max(0, seat.row - 1) } : seat
+      );
+    }
 
     const isSrsSleeperSeater =
       provider === "SRS" &&
@@ -719,6 +854,19 @@ const normalizeColumns = (deckSeats: NormalizedSeat[]) => {
         l23.col = 3; // Force final position
       }
 
+      console.log("[computeVisualGrid] VRL Final Grid State");
+      console.table(
+        result.map(s => ({
+          id: s.id,
+          row: s.row,
+          gridRow: s.gridRow,
+          col: s.col,
+          upper: s.isUpper,
+          isSleeper: s.isSleeper,
+          isRotated: s.isRotated,
+        }))
+      );
+
       return result;
     }
 
@@ -728,13 +876,19 @@ const normalizeColumns = (deckSeats: NormalizedSeat[]) => {
       const minRow = deckSeats.length > 0 ? Math.min(...deckSeats.map(s => s.row)) : 0;
       const deckMaxCol = deckSeats.length > 0 ? Math.max(...deckSeats.map(s => s.col)) : 3;
 
+      const isBharathiSleeper =
+        provider === "EZEE_V3" &&
+        operatorName?.toLowerCase().includes("bharathi") &&
+        busType?.toLowerCase().includes("2+1") &&
+        busType?.toLowerCase().includes("sleeper") &&
+        !busType?.toLowerCase().includes("seater");
+
       axisMappedSeats = deckSeats.map(seat => ({
         ...seat,
         // Make it 0-indexed for the formula to work correctly
         row: seat.row - minRow,
-        // EZEE API assigns columns in reverse (right to left). 
-        // We flip them so deckMaxCol becomes 0 (left side).
-        col: deckMaxCol - seat.col,
+        // EZEE API assigns columns in reverse, but we must NOT reverse for Bharathi 2+1 sleeper.
+        col: isBharathiSleeper ? seat.col : deckMaxCol - seat.col,
       }));
 
       console.log(
@@ -756,18 +910,14 @@ const isCMRExpress =
   operatorName?.trim().toLowerCase() === "cmr express";
 
 if ((provider === "EZEE_V2" || provider === "EZEE_V3") && !isCMRExpress) {
-        const lowerDeckSeatsOnly = axisMappedSeats.filter(
-          s => !s.isUpper && String(s.id).toUpperCase() !== "REME"
-        );
-        const lastLowerRow =
-          lowerDeckSeatsOnly.length > 0
-            ? Math.max(...lowerDeckSeatsOnly.map(s => s.row))
-            : 0;
-        axisMappedSeats = axisMappedSeats.map(s =>
-          String(s.id).toUpperCase() === "REME"
-            ? { ...s, row: lastLowerRow + 2, col: 1 }
-            : s
-        );
+  const lowerDeckSeatsOnly = axisMappedSeats.filter(
+    s => !s.isUpper && String(s.id).toUpperCase() !== "REME"
+  );
+  const lastLowerRow =
+    lowerDeckSeatsOnly.length > 0
+      ? Math.max(...lowerDeckSeatsOnly.map(s => s.row))
+      : 0;
+
 }
 
       // Compress columns to avoid giant aisle gaps
@@ -775,30 +925,33 @@ if ((provider === "EZEE_V2" || provider === "EZEE_V3") && !isCMRExpress) {
       const uniqueCols = [...new Set(axisMappedSeats.map(s => s.col))].sort((a, b) => a - b);
       const rotatedSeats = axisMappedSeats.filter(s => lastSeats.includes(s.id) || s.isRotated);
 
-      const needsAisleGap = rotatedSeats.length === 0;
-
       const colMap = new Map<number, number>();
-      usedCols.forEach((c, i) => {
-        colMap.set(c, i);
-      });
 
-      if (needsAisleGap) {
-        let compressedIdx = 0;
-        for (let i = 0; i < uniqueCols.length; i++) {
-          const prev = uniqueCols[i - 1] ?? uniqueCols[0];
-          const curr = uniqueCols[i];
-          if (i > 0 && curr - prev > 1) compressedIdx++; // keep one blank column for aisle spacing
-          colMap.set(curr, compressedIdx);
-          compressedIdx++;
-        }
-      } else {
-        uniqueCols.forEach((c, i) => {
+      if (!isBharathiSleeper) {
+        const needsAisleGap = rotatedSeats.length === 0;
+
+        usedCols.forEach((c, i) => {
           colMap.set(c, i);
         });
+
+        if (needsAisleGap) {
+          let compressedIdx = 0;
+          for (let i = 0; i < uniqueCols.length; i++) {
+            const prev = uniqueCols[i - 1] ?? uniqueCols[0];
+            const curr = uniqueCols[i];
+            if (i > 0 && curr - prev > 1) compressedIdx++; // keep one blank column for aisle spacing
+            colMap.set(curr, compressedIdx);
+            compressedIdx++;
+          }
+        } else {
+          uniqueCols.forEach((c, i) => {
+            colMap.set(c, i);
+          });
+        }
       }
 
       axisMappedSeats = axisMappedSeats.map(seat => {
-        let mappedCol = colMap.get(seat.col)!;
+        let mappedCol = isBharathiSleeper ? seat.col : colMap.get(seat.col)!;
         const upperId = String(seat.id).toUpperCase();
         const isRestRoom = ["RRM", "RM", "RESTROOM", "WASHROOM", "RT", "RT1"].includes(upperId) || (seat as any).isRestRoom || (seat as any).seatType === "RRM";
         const isRotated = lastSeats.includes(seat.id) || seat.isRotated;
@@ -855,6 +1008,18 @@ if ((provider === "EZEE_V2" || provider === "EZEE_V3") && !isCMRExpress) {
       provider === "SRS"
     ) {
       colNormalized = normalizeColumns(axisMappedSeats);
+
+    if (isAnkitShrinathSleeper) {
+      colNormalized = colNormalized.map(seat => {
+          if (!seat.isUpper && seat.id === "25") {
+              return {
+                  ...seat,
+                  col: 1
+              };
+          }
+          return seat;
+      });
+    }
     }
 
     if (isPureSriBalajiSleeper) {
@@ -1027,21 +1192,9 @@ if ((provider === "EZEE_V2" || provider === "EZEE_V3") && !isCMRExpress) {
         }
       );
 
-      const seaterRows = [...new Set(
-        colNormalized
-          .filter(s => !s.isSleeper)
-          .map(s => s.row)
-      )].length;
-
-      colNormalized = colNormalized.map(seat => {
-        if (seat.isSleeper) {
-          return {
-            ...seat,
-            row: seat.row + seaterRows
-          };
-        }
-        return seat;
-      });
+      // For this specific layout, we do not move sleeper rows after seaters.
+      // The API provides the correct relative row positioning, and we will
+      // calculate the visual gridRow directly based on the seat type.
     }
 
     // 4. Map absolute API rows → safe CSS Grid rows
@@ -1049,6 +1202,17 @@ if ((provider === "EZEE_V2" || provider === "EZEE_V3") && !isCMRExpress) {
     const rowMap = new Map<number, number>();
     const rowIsAllSleeper = new Map<number, boolean>();
     let currentGridRow = 1;
+
+    const isEzeeMixedBus =
+      (provider === "EZEE_V2" || provider === "EZEE_V3") &&
+      busType?.toLowerCase().includes("seater") &&
+      busType?.toLowerCase().includes("sleeper");
+
+    // This flag is used to bypass the EZEE row expansion logic specifically for Bharathi mixed buses.
+    const isBharathiMixedForEzeeBypass =
+      isEzeeMixedBus &&
+      operatorName?.toLowerCase().includes("bharathi");
+
 
     sortedRows.forEach(apiRow => {
       const seatsInRow = colNormalized.filter(s => s.row === apiRow);
@@ -1065,7 +1229,7 @@ if ((provider === "EZEE_V2" || provider === "EZEE_V3") && !isCMRExpress) {
       // For EZEE mixed layouts, if ANY seat in the row is a sleeper, the entire
       // grid row must be expanded to accommodate it, otherwise the taller sleeper
       // seat will visually collide with the seater-height row below it.
-      if (provider === "EZEE_V2" || provider === "EZEE_V3") {
+      if (isEzeeMixedBus && !isBharathiMixedForEzeeBypass) {
         treatAsAllSleeper = hasSleeperInRow;
       }
 
@@ -1131,7 +1295,23 @@ if ((provider === "EZEE_V2" || provider === "EZEE_V3") && !isCMRExpress) {
     colNormalized.forEach(s => {
       rowCounts[s.row] = (rowCounts[s.row] || 0) + 1;
     });
-    const maxRowVal = Math.max(...colNormalized.map(s => s.row));
+    const maxRowVal = colNormalized.length > 0 ? Math.max(...colNormalized.map(s => s.row)) : 0;
+
+
+    if (isBharathiSleeper) {
+      console.log("[Layout] Bharathi 2+1 sleeper override applied.");
+      return colNormalized.map(seat => ({
+        ...seat,  
+        gridRow: rowMap.get(seat.row)!,
+        shouldAlignToBottom: false,
+        shouldCenterInSleeperSlot: false,
+        isInMixedEzeeColumn: false,
+        ezeeNeedsSleeperSlot: false,
+        ezeeAlignToBottom: false,
+        totalSeatsInRow: rowCounts[seat.row],
+        isLastRow: shiftedSeatIds.has(seat.id) || seat.row === maxRowVal,
+      }));
+    }
 
     const isSrsMixed =
       provider === "SRS" &&
@@ -1144,7 +1324,7 @@ if ((provider === "EZEE_V2" || provider === "EZEE_V3") && !isCMRExpress) {
     const ezeeNeedsSleeperSlotSet = new Set<string>();
     const ezeeAlignToBottomSet = new Set<string>();
 
-    if (isEzeeProvider && !isEzeeThreeRowSeaterLayout) {
+    if (isEzeeProvider && !isEzeeThreeRowSeaterLayout && !isEzeeMixedBus) {
       const cols = [...new Set(colNormalized.map(s => s.col))];
       cols.forEach(col => {
         const seatsInCol = colNormalized.filter(s => s.col === col).sort((a, b) => a.row - b.row);
@@ -1226,24 +1406,16 @@ if ((provider === "EZEE_V2" || provider === "EZEE_V3") && !isCMRExpress) {
     if (isSrsMixed || isEzeeThreeRowSeaterLayout || isPatelDayavan) {
       console.log(`[Layout] ${isPatelDayavan ? "Patel" : isSrsMixed ? "SRS" : "EZEE Three Row Seater"} mixed layout detected. Bypassing specific stacking logic.`);
       
-      let sleeperOffset = 0;
-      if (isEzeeThreeRowSeaterLayout) {
-        const seaters = colNormalized.filter(s => !s.isSleeper);
-        const sleepers = colNormalized.filter(s => s.isSleeper);
-        if (seaters.length > 0 && sleepers.length > 0) {
-          const seaterMaxGridRow = Math.max(...seaters.map(s => rowMap.get(s.row)!));
-          const sleeperMinMappedRow = Math.min(...sleepers.map(s => rowMap.get(s.row)!));
-          // First sleeper starts exactly 2 grid rows below the last seater to create a 1-row gap
-          const targetFirstSleeperRow = seaterMaxGridRow + 2; 
-          sleeperOffset = targetFirstSleeperRow - sleeperMinMappedRow;
-        }
-      }
-
       const isCVR = provider === "SRS" && operatorName?.toUpperCase().includes("CVR");
 
       const result = colNormalized.map(seat => {
-        const mappedRow = rowMap.get(seat.row)!;
-        let finalMappedRow = mappedRow;
+        let finalMappedRow;
+
+        if (isEzeeThreeRowSeaterLayout) {
+          finalMappedRow = seat.isSleeper ? (seat.row * 2) + 1 : seat.row + 1;
+        } else {
+          finalMappedRow = rowMap.get(seat.row)!;
+        }
 
         if (isCVR) {
           // shift all seaters one row down
@@ -1277,7 +1449,7 @@ if (
 
         return {
           ...seat,
-          gridRow: (isEzeeThreeRowSeaterLayout && seat.isSleeper) ? finalMappedRow + sleeperOffset : finalMappedRow,
+          gridRow: finalMappedRow,
           allSleeperRow: rowIsAllSleeper.get(seat.row) ?? false,
           shouldAlignToBottom: false, // SRS mixed layouts do not need seater centering.
           totalSeatsInRow: rowCounts[seat.row],
@@ -1316,6 +1488,20 @@ if (
           }
         }
       }
+
+      console.log("[computeVisualGrid] SRS/EZEE Special Final Grid State");
+      console.table(
+        result.map(s => ({
+          id: s.id,
+          row: s.row,
+          gridRow: s.gridRow,
+          col: s.col,
+          upper: s.isUpper,
+          isSleeper: s.isSleeper,
+          isRotated: s.isRotated,
+        }))
+      );
+
       return result;
     }
 
@@ -1333,7 +1519,9 @@ if (
       let finalShouldAlignToBottom = false;
       let shouldCenterInSleeperSlot = false;
 
-      if (isEzeeProvider) {
+      if (isBharathi) {
+        finalGridRow = rowMap.get(seat.row)!;
+      } else if (isEzeeProvider) {
         finalGridRow = ezeeGridRows.get(seat.id) || 1;
       }
 
@@ -1386,6 +1574,17 @@ if (
         gridRow: s.gridRow
       }))
     );
+
+    const keyBharathiSeats = visualGridResult.filter(s => ["SL1", "SL2", "SL3", "SL4", "SL5", "J2", "K1", "K2", "K3"].includes(s.id));
+    if (keyBharathiSeats.length > 0) {
+      console.log("[Bharathi Mixed] Final grid data for key seats:");
+      console.table(keyBharathiSeats.map(s => ({
+        id: s.id,
+        row: s.row,
+        col: s.col,
+        gridRow: s.gridRow,
+      })));
+    }
 
     const isGaneshR42 =
       provider === "SRS" &&
@@ -1496,6 +1695,55 @@ if (
       });
     }
 
+    if (isSriVaralakshmi) {
+      const reme = visualGridResult.find(
+        s => String(s.id).toUpperCase() === "REME"
+      );
+
+      if (reme) {
+        const maxGridRow = Math.max(
+          ...visualGridResult
+            .filter(s => String(s.id).toUpperCase() !== "REME")
+            .map(s => s.gridRow || 0)
+        );
+        reme.gridRow = maxGridRow + 1;
+        reme.col = 1;
+      }
+    }
+
+    if (isBharathiMixed) {
+      console.log("[Bharathi Mixed] Shifting visual grid rows for seats A-F.");
+      visualGridResult = visualGridResult.map((seat) => {
+        // For this specific layout, we want to create a visual gap between F and G.
+        // We do this by shifting the `gridRow` of all seats up to row 5 (A-F) down by one.
+        // This leaves G and subsequent rows in their original grid positions.
+        if (seat.row <= 5) {
+          return {
+            ...seat,
+            gridRow: (seat.gridRow ?? 0) + 1,
+          };
+        }
+        return seat;
+      });
+    }
+
+    if (isBharathiMixed) {
+      visualGridResult = visualGridResult.map(seat => {
+        if (
+          seat.isUpper &&
+          seat.isSleeper &&
+          seat.row >= 2
+        ) {
+          return {
+            ...seat,
+            gridRow: (seat.gridRow ?? 0),
+          };
+        }
+    
+        return seat;
+      });
+    }
+
     const isTargetJayavin =
       provider === "EZEE_V3" &&
       operatorName?.trim().toLowerCase() === "jayavin travels" &&
@@ -1565,18 +1813,43 @@ if (
         }))
     );
 
+    console.log("[computeVisualGrid] Final Grid State");
+    console.table(
+      visualGridResult.map(s => ({
+        id: s.id,
+        row: s.row,
+        gridRow: s.gridRow,
+        col: s.col,
+        upper: s.isUpper,
+        isSleeper: s.isSleeper,
+        isRotated: s.isRotated,
+      }))
+    );
+
     return visualGridResult;
   };
 
   // ✅ Process both decks through the visual grid formatter
   const normalizedLowerDeckSeats = useMemo(
-    () => computeVisualGrid(correctedLowerDeckSeats, isVrl), // isLowerDeck is inferred inside
-    [correctedLowerDeckSeats, isVrl, busType, operatorName, provider, lastSeats]
+    () => computeVisualGrid(correctedLowerDeckSeats, isVrl, tripCode), // isLowerDeck is inferred inside
+    [correctedLowerDeckSeats, isVrl, busType, operatorName, provider, lastSeats, tripCode]
   );
 
   const normalizedUpperDeckSeats = useMemo(
-    () => computeVisualGrid(correctedUpperDeckSeats, isVrl), // isLowerDeck is inferred inside
-    [correctedUpperDeckSeats, isVrl, busType, operatorName, provider, lastSeats]
+    () => computeVisualGrid(correctedUpperDeckSeats, isVrl, tripCode), // isLowerDeck is inferred inside
+    [correctedUpperDeckSeats, isVrl, busType, operatorName, provider, lastSeats, tripCode]
+  );
+
+  console.log("[Rendering] Lower deck seats about to be rendered:");
+  console.table(
+    normalizedLowerDeckSeats.map(s => ({
+      id: s.id,
+      row: s.row,
+      gridRow: s.gridRow,
+      col: s.col,
+      isUpper: s.isUpper,
+      isSleeper: s.isSleeper,
+    }))
   );
 
   console.log(

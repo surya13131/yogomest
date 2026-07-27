@@ -363,6 +363,11 @@ export default function MyBookingsPage() {
       const url = `${BASE_URL}/api/busBooking/getAllBookings/${userId}`;
       console.log("API URL:", url);
       const res = await fetch(url, { method: "GET", headers: { "Content-Type": "application/json" } });
+      const res = await fetch(url, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store", // Explicitly disable caching for dynamic user data
+      });
 
       if (res.ok) {
         const data = await res.json();
