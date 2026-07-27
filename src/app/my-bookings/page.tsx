@@ -362,7 +362,6 @@ export default function MyBookingsPage() {
       
       const url = `${BASE_URL}/api/busBooking/getAllBookings/${userId}`;
       console.log("API URL:", url);
-      const res = await fetch(url, { method: "GET", headers: { "Content-Type": "application/json" } });
       const res = await fetch(url, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
