@@ -821,7 +821,7 @@ const normalizeColumns = (deckSeats: NormalizedSeat[]) => {
             busType?.includes("Gold Class");
 
           if (isTargetVRLBus && String(seat.id).toUpperCase() === "L23") {
-            seat.col = 3; // Force L23 to column 3 during initial mapping
+            seat.col = 0; // Force L23 to column 3 during initial mapping
           }
           const isMixedVrl =
             busType?.toLowerCase().includes("sleeper") &&
@@ -851,7 +851,7 @@ const normalizeColumns = (deckSeats: NormalizedSeat[]) => {
       );
 
       if (l23) {
-        l23.col = 3; // Force final position
+        l23.col = 0; // Force final position
       }
 
       console.log("[computeVisualGrid] VRL Final Grid State");
