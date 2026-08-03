@@ -1,4 +1,4 @@
-export const BASE_URL = "";
+export const BASE_URL = "https://apis.yesgobus.com";
 
 export * from "./api.auth";
 export * from "./api.bus";

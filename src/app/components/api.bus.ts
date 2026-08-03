@@ -168,6 +168,36 @@ export const fetchVrlBusesV2 = async (
   return [];
 };
 
+const getSrsStartingFare = (bus: any): number => {
+  // 1. SRS gives the intended display fare/range here.
+  // "3810.0/6666.0" -> 3810
+  // "10000.0"       -> 10000
+  const displayFares = String(bus?.show_fare_screen || "")
+    .split("/")
+    .map(value => Number(value.trim()))
+    .filter(value => Number.isFinite(value) && value > 0);
+
+  if (displayFares.length > 0) {
+    return Math.min(...displayFares);
+  }
+
+  // 2. Fallback to fare_str
+  // "DLB:6666, DUB:6666, LB:6666, PB:3810, UB:6666"
+  const fareStrFares = String(bus?.fare_str || "")
+    .split(",")
+    .map(part => {
+      const [, fare] = part.split(":");
+      return Number(fare);
+    })
+    .filter(value => Number.isFinite(value) && value > 0);
+
+  if (fareStrFares.length > 0) {
+    return Math.min(...fareStrFares);
+  }
+
+  return 0;
+};
+
 export const fetchSrsBuses = async (
   sourceName: string,
   destName: string,
@@ -175,20 +205,8 @@ export const fetchSrsBuses = async (
   destId: string,
   date: string
 ): Promise<NormalizedBus[]> => {
-  const getSrsMinAvailableFare = (bus: any): number => {
-    const available = bus?.bus_layout?.available ?? "";
-
-    const fares = available
-      .split(",")
-      .map((item: string) => Number(item.split("|")[1]))
-      .filter((v: number) => !isNaN(v) && v > 0);
-
-    return fares.length ? Math.min(...fares) : 0;
-  };
-
   const mapData = (data: any[]): NormalizedBus[] =>
     data.map((bus: any): NormalizedBus => { 
-      const srsMinFare = getSrsMinAvailableFare(bus);
       return {
         id: bus.id?.toString() || Math.random().toString(),
         operatorName: bus.operator_service_name?.trim() || bus.operatorName || "SRS Travels",
@@ -196,7 +214,7 @@ export const fetchSrsBuses = async (
         departureTime: bus.dep_time || bus.departureTime || "--:--",
         arrivalTime: bus.arr_time || bus.arrivalTime || "--:--",
         duration: bus.duration || "--",
-        price: srsMinFare > 0 ? srsMinFare : extractValidPrice(bus),
+        price: getSrsStartingFare(bus) || extractValidPrice(bus),
         availableSeats: bus.available_seats || bus.availableSeats || 0,
         rating: "4.6",
         apiProvider: "SRS", 
@@ -232,18 +250,8 @@ export const fetchSrsBusesV2 = async (
   sourceId: string,
   destId: string
 ): Promise<NormalizedBus[]> => {
-  const getSrsMinAvailableFare = (bus: any): number => {
-    const available = bus?.bus_layout?.available ?? "";
-    const fares = available
-      .split(",")
-      .map((item: string) => Number(item.split("|")[1]))
-      .filter((v: number) => !isNaN(v) && v > 0);
-    return fares.length ? Math.min(...fares) : 0;
-  };
-
   const mapData = (data: any[]): NormalizedBus[] =>
     data.map((bus: any): NormalizedBus => {
-      const srsMinFare = getSrsMinAvailableFare(bus);
       return {
         id: bus.id?.toString() || Math.random().toString(),
         operatorName: bus.operator_service_name?.trim() || bus.operatorName || "SRS Travels",
@@ -251,7 +259,7 @@ export const fetchSrsBusesV2 = async (
         departureTime: bus.dep_time || bus.departureTime || "--:--",
         arrivalTime: bus.arr_time || bus.arrivalTime || "--:--",
         duration: bus.duration || "--",
-        price: srsMinFare > 0 ? srsMinFare : extractValidPrice(bus),
+        price: getSrsStartingFare(bus) || extractValidPrice(bus),
         availableSeats: bus.available_seats || bus.availableSeats || 0,
         rating: "4.6",
         apiProvider: "SRS",

@@ -56,10 +56,10 @@ export const fetchCitySuggestions = async (
     const mappedData = (result.data || [])
       .filter((city: any) => city.id)
       .map((city: any) => {
-        // ✅ FIX: Safely handles Arrays, Nulls, and Strings for Ezee Code
+
         let finalEzeeCode = "";
 
-        // 🔥 Try ALL possible backend keys
+      
         const rawEzeeData = 
           city.ezeeCityId ||        
           city.ezeeStationCode ||
@@ -109,7 +109,7 @@ export const fetchBusFilters = async (
     date: string;
     sourceId: string;
     destId: string;
-  }
+  } 
 ) => {
   const cacheKey = `filters_${provider}_${params.sourceId}_${params.destId}_${params.date}`;
   const cached = getCachedData(cacheKey);
